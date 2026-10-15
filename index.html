@@ -126,7 +126,7 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
   </div>
 </main>
 <script>
-var data = null, onlyPending = false;
+var data = null, onlyPending = false, lastChecked = null;
 try { onlyPending = localStorage.getItem('trips-filter') === 'pending'; } catch (e) {}
 
 function todayStr() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -160,7 +160,9 @@ function render() {
   document.getElementById('days').innerHTML = html;
   if (data && (data.updated || data.exported)) {
     var u = new Date(data.updated || data.exported);
-    document.getElementById('updated').textContent = 'Last updated ' + u.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + u.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    var line = 'List last changed ' + u.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + u.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    if (lastChecked) line += ' · Checked ' + lastChecked.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    document.getElementById('updated').textContent = line;
   }
 }
 
@@ -171,7 +173,7 @@ function load() {
   fetch('trips.json?t=' + Date.now(), { cache: 'no-store' })
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function (j) {
-      data = j; document.getElementById('warn').hidden = true; if (typeof syncEd === 'function') syncEd();
+      data = j; lastChecked = new Date(); document.getElementById('warn').hidden = true; if (typeof syncEd === 'function') syncEd();
       try { localStorage.setItem('trips-last', JSON.stringify(j)); } catch (e) {}
       render();
     })
@@ -185,7 +187,10 @@ function load() {
 
 document.getElementById('f-all').onclick = function () { onlyPending = false; try { localStorage.setItem('trips-filter', 'all'); } catch (e) {} render(); };
 document.getElementById('f-pending').onclick = function () { onlyPending = true; try { localStorage.setItem('trips-filter', 'pending'); } catch (e) {} render(); };
-document.getElementById('refresh').onclick = load;
+document.getElementById('refresh').onclick = function () {
+  var b = this; b.textContent = 'Checking…'; b.disabled = true;
+  load(); setTimeout(function () { b.textContent = 'Refresh'; b.disabled = false; }, 800);
+};
 document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
 setInterval(function () { if (!document.hidden) load(); }, 120000);
 // Hidden editing screen. Everyone else only sees the list. Open the page with #edit=KEY (the editing link, which
