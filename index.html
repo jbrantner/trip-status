@@ -416,7 +416,7 @@ document.getElementById('mSend').onclick = function () {
   var list = mine(); list.push({ id: id, initials: v, icon: icon });
   try { localStorage.setItem('trip-status-mine', JSON.stringify(list)); } catch (e) {}
   done(id);
-  fetch(INBOX, { method: 'POST', body: 'Profile request: ' + v + ' ' + icon + ' ' + id }).catch(function () {});
+  if (!window.TRIPS_PREVIEW) fetch(INBOX, { method: 'POST', body: 'Profile request: ' + v + ' ' + icon + ' ' + id }).catch(function () {});
 };
 function setFilter(f) { onlyPending = f === 'pending'; onlyMine = f === 'mine'; try { localStorage.setItem('trips-filter', f); } catch (e) {} render(); }
 document.getElementById('f-all').onclick = function () { setFilter('all'); };
