@@ -162,7 +162,7 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
   <div class="who" id="who" role="group" aria-label="View as" hidden></div>
   <section class="up" id="make" hidden>
     <h2>Make my profile</h2>
-    <p>Type your name, pick an icon and tap Apply. Only your initials are sent (like J.B.). Your name never leaves this screen and isn't saved.</p>
+    <p>Type your name, pick an icon and tap Apply. It's added for everyone within about 15 minutes. Only your initials are sent (like J.B.). Your name never leaves this screen and isn't saved.</p>
     <div class="padd">
       <input type="text" id="mFirst" maxlength="30" placeholder="First name" aria-label="First name" autocomplete="off">
       <input type="text" id="mLast" maxlength="30" placeholder="Last name" aria-label="Last name" autocomplete="off">
@@ -209,7 +209,7 @@ function askedKey(t) { return me + '|' + t.date + '|' + (t.time || 'TBD'); }
 function askedList() { try { return JSON.parse(localStorage.getItem('trip-status-asked') || '[]'); } catch (e) { return []; } }
 function takeHtml(t) {
   if (!me || t.status === 'Assigned' || (t.who || []).indexOf(me) >= 0) return '';
-  if (askedList().indexOf(askedKey(t)) >= 0) return '<span class="asked">Asked to take this trip</span>';
+  if (askedList().indexOf(askedKey(t)) >= 0) return '<span class="asked">Requested. You\'ll show on this trip in about 5 to 15 minutes.</span>';
   return '<button class="take" data-d="' + esc(t.date) + '" data-t="' + esc(t.time || '') + '">Take this trip</button>';
 }
 function render() {
@@ -316,7 +316,7 @@ document.getElementById('mSend').onclick = function () {
   fetch(INBOX, { method: 'POST', body: 'Profile request: ' + v + ' ' + makeIcon })
     .then(function (r) {
       if (!r.ok) throw new Error(r.status);
-      msg.textContent = 'Sent. Once Jordan adds ' + makeIcon + ' ' + v + ', pick it under View as.';
+      msg.textContent = 'Sent. ' + makeIcon + ' ' + v + ' shows up under View as in about 5 to 15 minutes (tap Refresh).';
     })
     .catch(function () { msg.textContent = 'Could not send. Check your connection and tap Apply again.'; })
     .then(function () { setTimeout(function () { btn.disabled = false; }, 3000); });
@@ -391,7 +391,7 @@ document.getElementById('reqUpdate').onclick = function () {
   add.filter(function (q) { return q.trip; }).forEach(function (q) {
     ed.forEach(function (t) { if (t.date === q.date && (t.time || '') === q.time) { t.who = t.who || []; if (t.who.indexOf(q.pid) < 0) t.who.push(q.pid); t.status = 'Assigned'; } });
   });
-  add.filter(function (q) { return !q.trip; }).forEach(function (q) { if (!edP.some(function (p) { return p.initials === q.initials && p.icon === q.icon; })) edP.push({ id: 'p' + Date.now().toString(36) + q.id.slice(0, 4), initials: q.initials, icon: q.icon }); });
+  add.filter(function (q) { return !q.trip; }).forEach(function (q) { if (!edP.some(function (p) { return p.initials === q.initials && p.icon === q.icon; })) edP.push({ id: 'p' + Date.now().toString(36) + q.id.slice(0, 4).toLowerCase().replace(/[^a-z0-9]/g, ''), initials: q.initials, icon: q.icon }); });
   markHandled(add.map(function (q) { return q.id; })); requests = []; drawRequests();
   drawProfiles(); drawEd(); changed();
   document.getElementById('publish').click();
