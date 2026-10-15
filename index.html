@@ -55,7 +55,7 @@ main { padding-block: 14px 40px }
 .time { font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums }
 .when { display: flex; flex-direction: column; min-width: 0 }
 .label { font-size: .88rem; color: var(--muted); overflow-wrap: anywhere }
-.et .lbl { grid-column: 1 / 3 }
+.et .lbl { grid-column: 1 / -1 }
 .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 12px; font-size: .92rem; font-weight: 600; white-space: nowrap }
 .chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor }
 .chips { display: flex; flex-direction: column; align-items: flex-end; gap: 4px }
@@ -64,6 +64,24 @@ main { padding-block: 14px 40px }
 .slotrow .seg { flex: 1 }
 .slotrow .xs { font: inherit; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer }
 .addslot { grid-column: 1 / -1; justify-self: start; font: inherit; font-size: .85rem; background: none; border: 0; color: var(--brand2); text-decoration: underline; cursor: pointer; padding: 0 }
+.right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none }
+.editbtn { font: inherit; font-size: .85rem; font-weight: 600; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer }
+.row.open { display: block; background: var(--bg) }
+.row.open .et { border-top: 0; padding: 0 }
+.etfoot { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin-top: 4px }
+.etfoot .rm { font: inherit; font-size: .88rem; background: none; border: 0; color: var(--bad); text-decoration: underline; cursor: pointer; padding: 0 }
+.etfoot .done { font: inherit; font-weight: 600; padding: 8px 20px; border-radius: 10px; border: 1px solid var(--brand2); background: var(--brand2); color: #fff; cursor: pointer }
+.edhead { color: var(--fg) !important }
+.up .msg:empty { display: none }
+.edtools { display: flex; gap: 8px; flex-wrap: wrap }
+.more summary { cursor: pointer; color: var(--brand2); font-size: .9rem; text-decoration: underline }
+.more[open] summary { margin-bottom: 10px }
+.more { display: grid; gap: 10px }
+.savebar { position: sticky; bottom: 0; margin: 16px -16px -40px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: var(--card); border-top: 1px solid var(--line); display: flex; gap: 12px; align-items: center }
+.savebar .msg { flex: 1; font-size: .88rem }
+.savebar .msg.bad { color: var(--bad) }
+.savebar .btn { font: inherit; font-weight: 600; padding: 11px 22px; border-radius: 10px; border: 1px solid var(--brand2); background: var(--brand2); color: #fff; cursor: pointer }
+.savebar .btn:disabled { opacity: .45; cursor: default }
 .chip.Assigned { background: var(--ok-bg); color: var(--ok-fg) }
 .chip.Pending { background: var(--wait-bg); color: var(--wait-fg) }
 .empty { text-align: center; color: var(--muted); padding: 40px 10px }
@@ -84,7 +102,7 @@ main { padding-block: 14px 40px }
 .up .linkbtn { font: inherit; font-size: .85rem; background: none; border: 0; color: var(--brand2); text-decoration: underline; cursor: pointer; padding: 0; justify-self: start }
 .share { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px }
 .filelbl { font-size: .9rem; color: var(--muted); display: grid; gap: 4px }
-.et { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line) }
+.et { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line) }
 .et input { width: 100%; min-width: 0; font: inherit; font-size: .95rem; padding: 8px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg) }
 .et .del { font: inherit; font-size: 1.2rem; line-height: 1; width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer }
 .seg { grid-column: 1 / -1; display: flex; gap: 6px }
@@ -127,7 +145,7 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
 </div></header>
 <main class="wrap">
   <section class="up" id="upload" hidden>
-    <h2>Edit trips for everyone</h2>
+    <h2>Editing mode</h2>
     <div id="keyBox" hidden>
       <p>Connect this device once. The key is saved on this device only.</p>
       <ol>
@@ -140,34 +158,37 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
       <button class="btn" id="saveToken">Connect</button>
     </div>
     <div id="fileBox" hidden style="display:grid;gap:10px">
-      <p>Change trips below, or load the Trip Status file from Helper to replace the whole list. Nothing changes for anyone until you tap Save. Labels like "Activities" or "Trip 2" show to everyone, so leave names out.</p>
-      <label class="filelbl">Load Helper file <input type="file" id="file" accept=".json,application/json"></label>
+      <p class="edhead">Tap Edit on a trip to change it. Nobody else sees changes until you tap Save.</p>
+      <div class="edtools">
+        <button class="btn" id="add">+ Add trip</button>
+        <label class="btn">Load Helper file<input type="file" id="file" accept=".json,application/json" hidden></label>
+      </div>
       <div class="prof" id="reqBox" hidden>
         <h3>Profile requests</h3>
         <div class="plist" id="reqList"></div>
-        <button class="btn primary" id="reqUpdate">Update</button>
+        <button class="btn primary" id="reqUpdate">Add them</button>
       </div>
-      <div class="prof">
-        <h3>Profiles</h3>
-        <p>Type a name and pick an icon. Only the initials are kept, like J.B. 🌸. Everyone can see these. Tap one on a trip to show who requested it; requesters can also follow any trip on their own phone.</p>
-        <div class="plist" id="plist"></div>
-        <div class="padd">
-          <input type="text" id="pFirst" maxlength="30" placeholder="First name" aria-label="First name" autocomplete="off">
-          <input type="text" id="pLast" maxlength="30" placeholder="Last name" aria-label="Last name" autocomplete="off">
-          <button class="btn" id="pAdd">Add profile</button>
+      <details class="more">
+        <summary>Profiles and editing link</summary>
+        <div class="prof">
+          <h3>Profiles</h3>
+          <p>Only initials are kept, like J.B. 🌸. Everyone can see these.</p>
+          <div class="plist" id="plist"></div>
+          <div class="padd">
+            <input type="text" id="pFirst" maxlength="30" placeholder="First name" aria-label="First name" autocomplete="off">
+            <input type="text" id="pLast" maxlength="30" placeholder="Last name" aria-label="Last name" autocomplete="off">
+            <button class="btn" id="pAdd">Add profile</button>
+          </div>
+          <div class="icons" id="pIcons" role="group" aria-label="Icon"></div>
         </div>
-        <div class="icons" id="pIcons" role="group" aria-label="Icon"></div>
-      </div>
-      <div id="edTrips"></div>
-      <button class="btn" id="add">+ Add trip</button>
-      <button class="btn primary" id="publish" disabled>Save</button>
-      <div id="shareBox" class="share">
-        <p>Editing link: anyone you give it to can edit and Save. Keep it private.</p>
-        <button class="btn" id="copyLink">Copy editing link</button>
-      </div>
-      <button class="linkbtn" id="forget">Use a different key</button>
+        <div id="shareBox" class="share">
+          <p>Editing link: anyone you give it to can edit and Save. Keep it private.</p>
+          <button class="btn" id="copyLink">Copy editing link</button>
+          <button class="linkbtn" id="forget">Use a different key</button>
+        </div>
+      </details>
     </div>
-    <div class="msg" id="upMsg"></div>
+    <div class="msg" id="keyMsg"></div>
   </section>
   <div class="warn" id="warn" hidden></div>
   <div class="who" id="who" role="group" aria-label="View as" hidden></div>
@@ -193,6 +214,7 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
     <span id="updated"></span>
     <button id="refresh">Refresh</button>
   </div>
+  <div class="savebar" id="saveBar" hidden><span class="msg" id="upMsg"></span><button class="btn primary" id="publish" disabled>Save</button></div>
 </main>
 <script>
 var data = null, onlyPending = false, onlyMine = false, lastChecked = null, me = '';
@@ -229,9 +251,12 @@ function takeHtml(t) {
   var on = isFollowed(t);
   return '<button class="take' + (on ? ' on' : '') + '" data-d="' + esc(t.date) + '" data-t="' + esc(t.time || '') + '" aria-pressed="' + on + '">' + (on ? 'Following ✓' : 'Follow') + '</button>';
 }
+// Editing mode: the same list everyone sees, with an Edit button on each trip that opens it in place.
+var openI = -1;
+function editing() { return !!ghToken && !document.getElementById('upload').hidden && Array.isArray(ed); }
 function render() {
-  var today = todayStr(), tomorrow = addDays(today, 1);
-  var all = ((data && data.trips) || []).filter(function (t) { return t.date >= today; })
+  var today = todayStr(), tomorrow = addDays(today, 1), edm = editing();
+  var all = (edm ? ed.map(function (t, i) { var c = Object.assign({}, t); c._i = i; return c; }) : ((data && data.trips) || [])).filter(function (t) { return t.date >= today || (edm && t._i === openI); })
     .sort(function (a, b) { return (a.date + (a.time || '99')).localeCompare(b.date + (b.time || '99')); });
   var meP = profileById(me);
   if (data && me && !meP) me = '';
@@ -263,13 +288,15 @@ function render() {
       last = t.date;
     }
     var sl = slots(t);
+    if (edm && t._i === openI) { html += '<div class="row open">' + edForm(ed[t._i], t._i) + '</div>'; return; }
     html += '<div class="row"><span class="when"><span class="time">' + esc(timeLabel(t.time)) + '</span>' + (t.label ? '<span class="label">' + esc(t.label) + '</span>' : '') +
-      ((t.who || []).length ? '<span class="people">' + t.who.map(function (id) { var p = profileById(id); return p ? '<span' + (id === me ? ' class="me"' : '') + '>' + esc(p.icon) + ' ' + esc(p.initials) + '</span>' : ''; }).join('') + '</span>' : '') + takeHtml(t) + '</span>' + (sl.length === 1 ? '<span class="chip ' + sl[0] + '">' + (sl[0] === 'Assigned' ? 'Driver assigned' : 'Pending') + '</span>'
-      : '<span class="chips">' + sl.map(function (x, n) { return '<span class="chip ' + x + '">Driver ' + (n + 1) + (x === 'Assigned' ? ' assigned' : ' pending') + '</span>'; }).join('') + '</span>') + '</div>';
+      ((t.who || []).length ? '<span class="people">' + t.who.map(function (id) { var p = profileById(id); return p ? '<span' + (id === me ? ' class="me"' : '') + '>' + esc(p.icon) + ' ' + esc(p.initials) + '</span>' : ''; }).join('') + '</span>' : '') + (edm ? '' : takeHtml(t)) + '</span>' + (edm ? '<span class="right">' : '') + (sl.length === 1 ? '<span class="chip ' + sl[0] + '">' + (sl[0] === 'Assigned' ? 'Driver assigned' : 'Pending') + '</span>'
+      : '<span class="chips">' + sl.map(function (x, n) { return '<span class="chip ' + x + '">Driver ' + (n + 1) + (x === 'Assigned' ? ' assigned' : ' pending') + '</span>'; }).join('') + '</span>') + (edm ? '<button class="editbtn" data-i="' + t._i + '">Edit</button></span>' : '') + '</div>';
   });
   if (last) html += '</div></section>';
-  if (!html) html = '<p class="empty">' + (!data ? 'Loading trips…' : onlyMine ? 'No upcoming trips for ' + esc(meP.initials) + ' yet. Tap All trips, then Follow on the trips you want here.' : onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') + '</p>';
+  if (!html) html = '<p class="empty">' + (!data ? 'Loading trips…' : edm && !onlyMine && !onlyPending ? 'No upcoming trips. Tap + Add trip or load a Helper file.' : onlyMine ? 'No upcoming trips for ' + esc(meP.initials) + ' yet. Tap All trips, then Follow on the trips you want here.' : onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') + '</p>';
   document.getElementById('days').innerHTML = html;
+  var sb = document.getElementById('saveBar'); if (sb) sb.hidden = !edm;
   if (data && (data.updated || data.exported)) {
     var u = new Date(data.updated || data.exported);
     var line = 'List last changed ' + u.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + u.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -363,7 +390,7 @@ setInterval(function () { if (!document.hidden) load(); }, 120000);
 var REPO_API = 'https://api.github.com/repos/jbrantner/trip-status/contents/trips.json';
 var ghToken = '', savedToken = '', linkToken = '';
 try { savedToken = localStorage.getItem('trip-status-key') || ''; } catch (e) {}
-function upMsg(t, bad) { var m = document.getElementById('upMsg'); m.textContent = t; m.className = 'msg' + (bad ? ' bad' : ''); }
+function upMsg(t, bad) { var m = document.getElementById(ghToken ? 'upMsg' : 'keyMsg'); m.textContent = t; m.className = 'msg' + (bad ? ' bad' : ''); }
 // A profile request link (#join=J.B.|🌸) opens the editing screen with that profile added, on a device that has the key.
 var joinReq = null;
 function handleJoin() {
@@ -423,7 +450,7 @@ function showUpload() {
   ghToken = linkToken || savedToken;
   document.getElementById('keyBox').hidden = !!ghToken;
   document.getElementById('fileBox').hidden = !ghToken;
-  syncEd();
+  syncEd(); render();
 }
 // Turns a GitHub refusal into a plain sentence plus GitHub's own words, so a wrong key setting can be spotted.
 function ghFail(r, step) {
@@ -464,35 +491,32 @@ function syncEd() {
   var today = todayStr();
   edP = profiles().map(function (p) { return { id: p.id, initials: p.initials, icon: p.icon }; });
   ed = ((data && data.trips) || []).filter(function (t) { return t.date >= today; }).map(function (t) { return { date: t.date, time: t.time || '', status: tripStatus(t), drivers: slots(t).slice(), label: t.label || '', who: (t.who || []).slice() }; });
-  sortEd(); drawEd(); drawProfiles(); checkRequests();
+  openI = -1; sortEd(); drawEd(); drawProfiles(); checkRequests();
   if (joinReq && lastChecked) { var r = joinReq; joinReq = null; addProfile(r.initials, r.icon, 'Profile request: added ' + r.icon + ' ' + r.initials + ' Tap Save to add it for everyone.'); }
 }
-function drawEd() {
-  var box = document.getElementById('edTrips');
-  if (!ed.length) { box.innerHTML = '<p class="edempty">No upcoming trips. Tap Add trip or load a Helper file.</p>'; return; }
-  box.innerHTML = ed.map(function (t, i) {
-    return '<div class="et" data-i="' + i + '">' +
-      '<input type="date" id="ed-d' + i + '" aria-label="Date" value="' + esc(t.date) + '">' +
-      '<input type="time" id="ed-t' + i + '" aria-label="Time" value="' + esc(t.time) + '">' +
-      '<button class="del" aria-label="Remove trip">×</button>' +
-      '<input type="text" class="lbl" id="ed-l' + i + '" maxlength="30" aria-label="Label" placeholder="Label (optional), no names" value="' + esc(t.label || '') + '">' +
-      (edP.length ? '<div class="assign"><small>Requested by:</small>' + edP.map(function (p) {
-        return '<button class="pchip' + ((t.who || []).indexOf(p.id) >= 0 ? ' on' : '') + '" data-p="' + esc(p.id) + '">' + pLabel(p) + '</button>'; }).join('') + '</div>' : '') +
-      slots(t).map(function (x, n, all) {
-        return '<div class="slotrow" data-s="' + n + '">' + (all.length > 1 ? '<small>Driver ' + (n + 1) + '</small>' : '') +
-          '<div class="seg"><button class="Pending' + (x !== 'Assigned' ? ' on' : '') + '">Pending</button>' +
-          '<button class="Assigned' + (x === 'Assigned' ? ' on' : '') + '">Assigned</button></div>' +
-          (all.length > 1 ? '<button class="xs" aria-label="Remove driver ' + (n + 1) + '">×</button>' : '') + '</div>';
-      }).join('') +
-      (slots(t).length < 6 ? '<button class="addslot">+ Another driver</button>' : '') + '</div>';
-  }).join('');
+function drawEd() { render(); }
+function edForm(t, i) {
+  return '<div class="et" data-i="' + i + '">' +
+    '<input type="date" id="ed-d' + i + '" aria-label="Date" value="' + esc(t.date) + '">' +
+    '<input type="time" id="ed-t' + i + '" aria-label="Time" value="' + esc(t.time) + '">' +
+    '<input type="text" class="lbl" id="ed-l' + i + '" maxlength="30" aria-label="Label" placeholder="Label (optional), no names" value="' + esc(t.label || '') + '">' +
+    (edP.length ? '<div class="assign"><small>Requested by:</small>' + edP.map(function (p) {
+      return '<button class="pchip' + ((t.who || []).indexOf(p.id) >= 0 ? ' on' : '') + '" data-p="' + esc(p.id) + '">' + pLabel(p) + '</button>'; }).join('') + '</div>' : '') +
+    slots(t).map(function (x, n, all) {
+      return '<div class="slotrow" data-s="' + n + '">' + (all.length > 1 ? '<small>Driver ' + (n + 1) + '</small>' : '') +
+        '<div class="seg"><button class="Pending' + (x !== 'Assigned' ? ' on' : '') + '">Pending</button>' +
+        '<button class="Assigned' + (x === 'Assigned' ? ' on' : '') + '">Assigned</button></div>' +
+        (all.length > 1 ? '<button class="xs" aria-label="Remove driver ' + (n + 1) + '">×</button>' : '') + '</div>';
+    }).join('') +
+    (slots(t).length < 6 ? '<button class="addslot">+ Another driver</button>' : '') +
+    '<div class="etfoot"><button class="rm">Remove trip</button><button class="done">Done</button></div></div>';
 }
 function changed(note) {
   dirty = true; data = { updated: new Date().toISOString(), profiles: edP.slice(), trips: ed.slice() }; render();
   document.getElementById('publish').disabled = false;
-  upMsg(note || 'Not saved yet. The list below shows what everyone will see.');
+  upMsg(note || 'Not saved yet.');
 }
-document.getElementById('edTrips').addEventListener('change', function (e) {
+document.getElementById('days').addEventListener('change', function (e) {
   var row = e.target.closest('.et'); if (!row) return;
   var t = ed[+row.dataset.i];
   if (e.target.type === 'date') t.date = e.target.value;
@@ -500,10 +524,13 @@ document.getElementById('edTrips').addEventListener('change', function (e) {
   if (e.target.classList.contains('lbl')) t.label = e.target.value.trim().slice(0, 30);
   changed();
 });
-document.getElementById('edTrips').addEventListener('click', function (e) {
+document.getElementById('days').addEventListener('click', function (e) {
+  var eb = e.target.closest('.editbtn');
+  if (eb) { if (document.activeElement) document.activeElement.blur(); openI = +eb.dataset.i; render(); var o = document.querySelector('.row.open'); if (o) o.scrollIntoView({ block: 'nearest' }); return; }
   var row = e.target.closest('.et'); if (!row) return;
   var i = +row.dataset.i;
-  if (e.target.classList.contains('del')) { ed.splice(i, 1); drawEd(); changed(); return; }
+  if (e.target.classList.contains('done')) { openI = -1; render(); return; }
+  if (e.target.classList.contains('rm')) { ed.splice(i, 1); openI = -1; changed(); return; }
   var pc = e.target.closest('.pchip');
   if (pc) {
     var w = ed[i].who = ed[i].who || [], k = w.indexOf(pc.dataset.p);
@@ -549,9 +576,10 @@ document.getElementById('plist').addEventListener('click', function (e) {
 });
 document.getElementById('add').onclick = function () {
   var last = ed[ed.length - 1];
-  ed.push({ date: last ? last.date : todayStr(), time: '', status: 'Pending' });
-  drawEd(); changed();
-  var el = document.getElementById('ed-t' + (ed.length - 1)); if (el) el.focus();
+  ed.push({ date: last && last.date >= todayStr() ? last.date : todayStr(), time: '', status: 'Pending' });
+  openI = ed.length - 1; onlyPending = onlyMine = false; try { localStorage.setItem('trips-filter', 'all'); } catch (e) {}
+  changed();
+  var o = document.querySelector('.row.open'); if (o) o.scrollIntoView({ block: 'center' });
 };
 document.getElementById('file').onchange = function (e) {
   var f = e.target.files[0]; if (!f) return;
@@ -559,7 +587,8 @@ document.getElementById('file').onchange = function (e) {
   f.text().then(function (txt) {
     var today = todayStr();
     // Commit a half-typed box first: if it were still focused when the list redraws, its change would land on the new list.
-    if (document.activeElement && document.getElementById('edTrips').contains(document.activeElement)) document.activeElement.blur();
+    if (document.activeElement && document.getElementById('days').contains(document.activeElement)) document.activeElement.blur();
+    openI = -1;
     // Helper's file has no labels or profiles, so a trip keeps what it already had here (same date and time).
     var old = {}; ed.forEach(function (t) { old[t.date + ' ' + t.time] = t; });
     ed = cleanTrips(JSON.parse(txt)).filter(function (t) { return t.date >= today; })
@@ -577,7 +606,7 @@ document.getElementById('publish').onclick = function () {
     if (r.status === 401) return ghFail(r, 'Reading');
     return r.ok ? r.json() : null;
   }).then(function (cur) {
-    var today = todayStr(); sortEd();
+    var today = todayStr(); openI = -1; sortEd();
     var body = { updated: new Date().toISOString(), trips: ed.filter(function (t) { return t.date >= today; }).map(function (t) {
       var o = { date: t.date, time: t.time || '', status: tripStatus(t) }; if (t.label) o.label = t.label.slice(0, 30);
       if (slots(t).length > 1) o.drivers = slots(t).slice();
