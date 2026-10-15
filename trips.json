@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-15T22:17:54.622Z",
+ "updated": "2026-10-15T22:38:57.960Z",
  "trips": [
   {
    "date": "2026-10-15",
@@ -210,6 +210,13 @@
    "date": "2027-06-17",
    "time": "11:15",
    "status": "Pending"
+  }
+ ],
+ "profiles": [
+  {
+   "id": "pmva4ew72nqDc",
+   "initials": "J.B.",
+   "icon": "🐬"
   }
  ]
 }
