@@ -1,7 +1,7 @@
-"""Applies coworkers' profile and trip requests from the ntfy.sh mailbox to trips.json.
+"""Applies coworkers' profile requests from the ntfy.sh mailbox to trips.json.
 
 Runs on GitHub's servers every few minutes (see .github/workflows/apply-requests.yml). It accepts only what the
-app itself sends: "Profile request: J.B. 🌸" and "Trip request: <profile id> <YYYY-MM-DD> <HH:MM|TBD>".
+app itself sends: "Profile request: J.B. 🌸". Following a trip stays on the follower's phone and never comes here.
 """
 import json, re, time, urllib.request
 from datetime import datetime, timezone
@@ -39,19 +39,6 @@ def main():
             print('Added profile', ini, icon)
             changed = True
             continue
-        t = re.fullmatch(r'Trip request: (p[a-z0-9]+) (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}|TBD)', text)
-        if t:
-            pid, date, tm = t.group(1), t.group(2), '' if t.group(3) == 'TBD' else t.group(3)
-            if not any(x['id'] == pid for x in profiles):
-                continue
-            for trip in trips:
-                if trip.get('date') == date and (trip.get('time') or '') == tm and trip.get('status') != 'Assigned':
-                    who = trip.setdefault('who', [])
-                    if pid not in who:
-                        who.append(pid)
-                    trip['status'] = 'Assigned'
-                    print('Assigned', pid, date, tm or 'TBD')
-                    changed = True
     state['since'] = msgs[-1]['id']
     json.dump(state, open(STATE, 'w'), indent=1)
     if changed:

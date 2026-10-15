@@ -1,5 +1,5 @@
 name: Apply requests
-# Every few minutes, add coworkers' profile and "Take this trip" requests to trips.json, then republish the site.
+# Every few minutes, add coworkers' profile requests to trips.json, then republish the site.
 on:
   schedule:
     - cron: '*/5 * * * *'
