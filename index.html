@@ -39,6 +39,16 @@ h1 { margin: 0; font-size: 1.45rem; letter-spacing: .2px }
 .avatar svg { width: 22px; height: 22px }
 .who { flex-wrap: wrap; overflow: visible; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px }
 .who .lead { flex-basis: 100% }
+.who { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px }
+.who[hidden] { display: none !important }
+.who .lead { grid-column: 1 / -1 }
+.who button.tile { flex-direction: column; gap: 4px; padding: 10px 4px; border-radius: 14px; font-size: .85rem; justify-content: center; white-space: normal }
+.tile .ti { font-size: 1.7rem; line-height: 1.1; width: 44px; height: 44px; border-radius: 50%; background: var(--bg); display: grid; place-items: center }
+.who button.tile[aria-pressed="true"] .ti { background: rgba(255,255,255,.2) }
+.tile.new .ti { color: var(--brand2); font-weight: 700 }
+#make .btn.primary { justify-self: stretch; padding: 13px }
+#make .padd input { flex: 1; width: auto; min-width: 0 }
+.foot button { border: 0 !important; background: none !important; color: var(--brand2) !important; text-decoration: underline; padding: 0 !important }
 .sum { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px }
 .sum span { background: rgba(255,255,255,.16); border-radius: 999px; padding: 4px 11px; font-size: .9rem; font-variant-numeric: tabular-nums }
 .sum b { font-weight: 700 }
@@ -110,12 +120,15 @@ main { padding-block: 14px 40px }
 .seg button.on.Pending { background: var(--wait-bg); color: var(--wait-fg); border-color: transparent }
 .seg button.on.Assigned { background: var(--ok-bg); color: var(--ok-fg); border-color: transparent }
 .edempty { color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); padding-top: 10px }
-.who { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none }
+.who { margin-bottom: 12px }
 .who::-webkit-scrollbar { display: none }
 .who button, .pchip { flex: none; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: .92rem; font-weight: 600; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; white-space: nowrap }
 .who button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff }
 .take { justify-self: start; align-self: start; margin-top: 6px; font: inherit; font-size: .85rem; font-weight: 600; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--brand2); background: transparent; color: var(--brand2); cursor: pointer }
-.take.on { background: var(--brand2); color: #fff }
+.take.on { background: none; color: var(--brand2) }
+.side { display: flex; align-items: center; gap: 6px; flex: none }
+.take { margin: 0 !important; align-self: center !important; width: 40px; height: 40px; padding: 0 !important; border: 0 !important; font-size: 1.5rem !important; line-height: 1; color: var(--muted) !important; background: none }
+.take.on { color: var(--brand2) !important }
 .who .lead { flex: none; align-self: center; font-size: .8rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700 }
 .icon { font-size: 1.05rem; line-height: 1 }
 .people { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px }
@@ -193,15 +206,14 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
   <div class="warn" id="warn" hidden></div>
   <div class="who" id="who" role="group" aria-label="View as" hidden></div>
   <section class="up" id="make" hidden>
-    <h2>Make my profile</h2>
-    <p>Type your name, pick an icon and tap Apply. It's added for everyone within about 15 minutes. Only your initials are sent (like J.B.). Your name never leaves this screen and isn't saved.</p>
+    <h2>New profile</h2>
+    <p>Only your initials are kept. Your name isn't saved.</p>
     <div class="padd">
       <input type="text" id="mFirst" maxlength="30" placeholder="First name" aria-label="First name" autocomplete="off">
       <input type="text" id="mLast" maxlength="30" placeholder="Last name" aria-label="Last name" autocomplete="off">
     </div>
-    <p class="msg" id="mPreview"></p>
     <div class="icons" id="mIcons" role="group" aria-label="Your icon"></div>
-    <button class="btn primary" id="mSend">Apply</button>
+    <button class="btn primary" id="mSend">Create profile</button>
     <div class="msg" id="mMsg"></div>
   </section>
   <div class="filters" role="group" aria-label="Show">
@@ -220,7 +232,29 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
 var data = null, onlyPending = false, onlyMine = false, lastChecked = null, me = '';
 var ICONS = ['🌸', '🌻', '🌵', '🍀', '🍁', '🌙', '⭐', '🔥', '🐝', '🦋', '🐢', '🐬', '🦉', '🍎', '🍋', '🎈', '⚓', '🎵'];
 try { me = localStorage.getItem('trip-status-me') || ''; } catch (e) {}
-function profiles() { return (data && Array.isArray(data.profiles)) ? data.profiles : []; }
+// A profile made on this device works here right away. It is kept in trip-status-mine until the shared list has it
+// (the request carries its id, so the shared copy has the same id), then that copy takes over on every device.
+function mine() { try { return JSON.parse(localStorage.getItem('trip-status-mine') || '[]'); } catch (e) { return []; } }
+function shared() { return (data && Array.isArray(data.profiles)) ? data.profiles : []; }
+function profiles() {
+  var sp = shared();
+  return sp.concat(mine().filter(function (m) { return !sp.some(function (p) { return p.id === m.id || (p.initials === m.initials && p.icon === m.icon); }); }));
+}
+// Once the shared list has this device's profile (or one just like it under another id), drop the local copy and switch to it.
+function settleMine() {
+  if (!data || !Array.isArray(data.profiles)) return;
+  var sp = shared(), keep = [];
+  mine().forEach(function (m) {
+    var s2 = sp.filter(function (p) { return p.id === m.id; })[0] || sp.filter(function (p) { return p.initials === m.initials && p.icon === m.icon; })[0];
+    if (!s2) { keep.push(m); return; }
+    if (me === m.id && s2.id !== m.id) {
+      me = s2.id; try { localStorage.setItem('trip-status-me', me); } catch (e) {}
+      var fl = followList().map(function (k) { return k.indexOf(m.id + '|') === 0 ? s2.id + k.slice(m.id.length) : k; });
+      try { localStorage.setItem('trip-status-follow', JSON.stringify(fl)); } catch (e) {}
+    }
+  });
+  try { localStorage.setItem('trip-status-mine', JSON.stringify(keep)); } catch (e) {}
+}
 function profileById(id) { return profiles().filter(function (p) { return p.id === id; })[0]; }
 // Initials only, always written J.B. style, so a profile can never spell out a name.
 function normInitials(v) { var l = String(v).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3); return l ? l.split('').join('.') + '.' : ''; }
@@ -249,7 +283,7 @@ function isFollowed(t) { return followList().indexOf(followKey(t)) >= 0; }
 function takeHtml(t) {
   if (!me || (t.who || []).indexOf(me) >= 0) return '';
   var on = isFollowed(t);
-  return '<button class="take' + (on ? ' on' : '') + '" data-d="' + esc(t.date) + '" data-t="' + esc(t.time || '') + '" aria-pressed="' + on + '">' + (on ? 'Following ✓' : 'Follow') + '</button>';
+  return '<button class="take' + (on ? ' on' : '') + '" data-d="' + esc(t.date) + '" data-t="' + esc(t.time || '') + '" aria-pressed="' + on + '" aria-label="Follow this trip" title="Follow: add to My trips">' + (on ? '★' : '☆') + '</button>';
 }
 // Editing mode: the same list everyone sees, with an Edit button on each trip that opens it in place.
 var openI = -1;
@@ -267,9 +301,10 @@ function render() {
   mb.setAttribute('aria-label', meP ? 'Profile: ' + meP.initials + ' (tap to switch)' : 'Choose or make a profile');
   if (!data) who.hidden = true;
   mb.setAttribute('aria-expanded', !who.hidden);
-  who.innerHTML = (ps.length ? '<span class="lead">Who\'s viewing?</span><button data-p="" aria-pressed="' + !me + '">Everyone</button>' +
-    ps.map(function (p) { return '<button data-p="' + esc(p.id) + '" aria-pressed="' + (p.id === me) + '">' + pLabel(p) + '</button>'; }).join('') : '') +
-    '<button data-make="1">+ Make my profile</button>';
+  who.innerHTML = '<span class="lead">Who\'s viewing?</span>' +
+    '<button class="tile" data-p="" aria-pressed="' + !me + '"><span class="ti">👥</span>Everyone</button>' +
+    ps.map(function (p) { return '<button class="tile" data-p="' + esc(p.id) + '" aria-pressed="' + (p.id === me) + '"><span class="ti">' + esc(p.icon) + '</span>' + esc(p.initials) + '</button>'; }).join('') +
+    '<button class="tile new" data-make="1"><span class="ti">+</span>New</button>';
   if (!me) onlyMine = false;
   // Requesters only see the list (and My trips once they pick a profile); the counts and Pending only are for the editing screen.
   if (!edm) onlyPending = false;
@@ -295,17 +330,16 @@ function render() {
     var sl = slots(t);
     if (edm && t._i === openI) { html += '<div class="row open">' + edForm(ed[t._i], t._i) + '</div>'; return; }
     html += '<div class="row"><span class="when"><span class="time">' + esc(timeLabel(t.time)) + '</span>' + (t.label ? '<span class="label">' + esc(t.label) + '</span>' : '') +
-      ((t.who || []).length ? '<span class="people">' + t.who.map(function (id) { var p = profileById(id); return p ? '<span' + (id === me ? ' class="me"' : '') + '>' + esc(p.icon) + ' ' + esc(p.initials) + '</span>' : ''; }).join('') + '</span>' : '') + (edm ? '' : takeHtml(t)) + '</span>' + (edm ? '<span class="right">' : '') + (sl.length === 1 ? '<span class="chip ' + sl[0] + '">' + (sl[0] === 'Assigned' ? 'Driver assigned' : 'Pending') + '</span>'
-      : '<span class="chips">' + sl.map(function (x, n) { return '<span class="chip ' + x + '">Driver ' + (n + 1) + (x === 'Assigned' ? ' assigned' : ' pending') + '</span>'; }).join('') + '</span>') + (edm ? '<button class="editbtn" data-i="' + t._i + '">Edit</button></span>' : '') + '</div>';
+      ((t.who || []).length ? '<span class="people">' + t.who.map(function (id) { var p = profileById(id); return p ? '<span' + (id === me ? ' class="me"' : '') + '>' + esc(p.icon) + ' ' + esc(p.initials) + '</span>' : ''; }).join('') + '</span>' : '') + '</span>' + (edm ? '<span class="right">' : '<span class="side">' + takeHtml(t)) + (sl.length === 1 ? '<span class="chip ' + sl[0] + '">' + (sl[0] === 'Assigned' ? 'Assigned' : 'Pending') + '</span>'
+      : '<span class="chips">' + sl.map(function (x, n) { return '<span class="chip ' + x + '">Driver ' + (n + 1) + (x === 'Assigned' ? ' assigned' : ' pending') + '</span>'; }).join('') + '</span>') + (edm ? '<button class="editbtn" data-i="' + t._i + '">Edit</button></span>' : '</span>') + '</div>';
   });
   if (last) html += '</div></section>';
-  if (!html) html = '<p class="empty">' + (!data ? 'Loading trips…' : edm && !onlyMine && !onlyPending ? 'No upcoming trips. Tap + Add trip or load a Helper file.' : onlyMine ? 'No upcoming trips for ' + esc(meP.initials) + ' yet. Tap All trips, then Follow on the trips you want here.' : onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') + '</p>';
+  if (!html) html = '<p class="empty">' + (!data ? 'Loading trips…' : edm && !onlyMine && !onlyPending ? 'No upcoming trips. Tap + Add trip or load a Helper file.' : onlyMine ? 'No upcoming trips for ' + esc(meP.initials) + ' yet. Tap All trips, then the ☆ on the trips you want here.' : onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') + '</p>';
   document.getElementById('days').innerHTML = html;
   var sb = document.getElementById('saveBar'); if (sb) sb.hidden = !edm;
   if (data && (data.updated || data.exported)) {
     var u = new Date(data.updated || data.exported);
-    var line = 'List last changed ' + u.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + u.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    if (lastChecked) line += ' · Checked ' + lastChecked.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    var line = 'Updated ' + u.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ', ' + u.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     document.getElementById('updated').textContent = line;
   }
 }
@@ -317,7 +351,7 @@ function load() {
   fetch('trips.json?t=' + Date.now(), { cache: 'no-store' })
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function (j) {
-      data = j; lastChecked = new Date(); document.getElementById('warn').hidden = true; if (typeof syncEd === 'function') syncEd();
+      data = j; settleMine(); lastChecked = new Date(); document.getElementById('warn').hidden = true; if (typeof syncEd === 'function') syncEd();
       try { localStorage.setItem('trips-last', JSON.stringify(j)); } catch (e) {}
       render();
     })
@@ -358,7 +392,7 @@ function drawMake() {
 }
 function makePreview() {
   var v = nameInitials(document.getElementById('mFirst').value, document.getElementById('mLast').value);
-  document.getElementById('mPreview').textContent = v ? 'Your profile: ' + makeIcon + ' ' + v : '';
+  document.getElementById('mSend').textContent = v ? 'Create ' + makeIcon + ' ' + v : 'Create profile';
 }
 document.getElementById('mFirst').addEventListener('input', makePreview);
 document.getElementById('mLast').addEventListener('input', makePreview);
@@ -369,15 +403,20 @@ var INBOX = 'https://ntfy.sh/trip-status-1e4522bd34bd56bb';
 document.getElementById('mSend').onclick = function () {
   var v = nameInitials(document.getElementById('mFirst').value, document.getElementById('mLast').value), msg = document.getElementById('mMsg');
   if (!v) { msg.textContent = 'Type your first and last name first.'; return; }
+  msg.textContent = '';
   document.getElementById('mFirst').value = ''; document.getElementById('mLast').value = ''; makePreview();
-  var btn = this; btn.disabled = true; msg.textContent = 'Sending…';
-  fetch(INBOX, { method: 'POST', body: 'Profile request: ' + v + ' ' + makeIcon })
-    .then(function (r) {
-      if (!r.ok) throw new Error(r.status);
-      msg.textContent = 'Sent. ' + makeIcon + ' ' + v + ' shows up under the circle at the top right in about 5 to 15 minutes (tap Refresh).';
-    })
-    .catch(function () { msg.textContent = 'Could not send. Check your connection and tap Apply again.'; })
-    .then(function () { setTimeout(function () { btn.disabled = false; }, 3000); });
+  var icon = makeIcon, same = profiles().filter(function (p) { return p.initials === v && p.icon === icon; })[0];
+  var done = function (id) {
+    me = id; try { localStorage.setItem('trip-status-me', me); } catch (e) {}
+    msg.textContent = ''; document.getElementById('make').hidden = true; document.getElementById('who').hidden = true; setFilter('mine');
+  };
+  if (same) { done(same.id); return; }
+  // Equip it here at once, then send it to the shared list so it shows up on this person's other devices too.
+  var id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  var list = mine(); list.push({ id: id, initials: v, icon: icon });
+  try { localStorage.setItem('trip-status-mine', JSON.stringify(list)); } catch (e) {}
+  done(id);
+  fetch(INBOX, { method: 'POST', body: 'Profile request: ' + v + ' ' + icon + ' ' + id }).catch(function () {});
 };
 function setFilter(f) { onlyPending = f === 'pending'; onlyMine = f === 'mine'; try { localStorage.setItem('trips-filter', f); } catch (e) {} render(); }
 document.getElementById('f-all').onclick = function () { setFilter('all'); };
@@ -417,8 +456,8 @@ function checkRequests() {
     requests = txt.split('\n').map(function (l) { try { return JSON.parse(l); } catch (e) { return null; } })
       .filter(function (m) { return m && m.event === 'message' && done.indexOf(m.id) < 0; })
       .map(function (m) {
-        var msg = String(m.message || ''), x = msg.match(/^Profile request: ([A-Z]\.[A-Z]\.) (\S+)$/);
-        return x && ICONS.indexOf(x[2]) >= 0 ? { id: m.id, initials: x[1], icon: x[2] } : null;
+        var msg = String(m.message || ''), x = msg.match(/^Profile request: ([A-Z]\.[A-Z]\.) (\S+)(?: (p[a-z0-9]{6,20}))?$/);
+        return x && ICONS.indexOf(x[2]) >= 0 ? { id: m.id, initials: x[1], icon: x[2], pid: x[3] } : null;
       })
       .filter(function (q) {
         if (!q) return false;
@@ -440,7 +479,7 @@ document.getElementById('reqList').addEventListener('click', function (e) {
 });
 document.getElementById('reqUpdate').onclick = function () {
   var add = requests.slice(); if (!add.length) return;
-  add.forEach(function (q) { if (!edP.some(function (p) { return p.initials === q.initials && p.icon === q.icon; })) edP.push({ id: 'p' + Date.now().toString(36) + q.id.slice(0, 4).toLowerCase().replace(/[^a-z0-9]/g, ''), initials: q.initials, icon: q.icon }); });
+  add.forEach(function (q) { if (!edP.some(function (p) { return p.initials === q.initials && p.icon === q.icon; })) edP.push({ id: q.pid && !edP.some(function (p) { return p.id === q.pid; }) ? q.pid : 'p' + Date.now().toString(36) + q.id.slice(0, 4).toLowerCase().replace(/[^a-z0-9]/g, ''), initials: q.initials, icon: q.icon }); });
   markHandled(add.map(function (q) { return q.id; })); requests = []; drawRequests();
   drawProfiles(); drawEd(); changed();
   document.getElementById('publish').click();

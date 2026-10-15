@@ -1,7 +1,7 @@
 """Applies coworkers' profile requests from the ntfy.sh mailbox to trips.json.
 
 Runs on GitHub's servers every few minutes (see .github/workflows/apply-requests.yml). It accepts only what the
-app itself sends: "Profile request: J.B. 🌸". Following a trip stays on the follower's phone and never comes here.
+app itself sends: "Profile request: J.B. 🌸" plus the id the phone already uses for it (so it keeps working there). Following a trip stays on the follower's phone and never comes here.
 """
 import json, re, time, urllib.request
 from datetime import datetime, timezone
@@ -28,14 +28,17 @@ def main():
     changed = False
     for m in msgs:
         text = str(m.get('message', ''))
-        p = re.fullmatch(r'Profile request: ([A-Z]\.[A-Z]\.) (\S+)', text)
+        p = re.fullmatch(r'Profile request: ([A-Z]\.[A-Z]\.) (\S+)(?: (p[a-z0-9]{6,20}))?', text)
         if p and p.group(2) in ICONS:
             ini, icon = p.group(1), p.group(2)
             if any(x['initials'] == ini and x['icon'] == icon for x in profiles):
                 continue
             if len(profiles) >= 200:
                 continue
-            profiles.append({'id': 'p' + format(int(time.time() * 1000), 'x') + m['id'][:4].lower(), 'initials': ini, 'icon': icon})
+            pid = p.group(3)
+            if not pid or any(x['id'] == pid for x in profiles):
+                pid = 'p' + format(int(time.time() * 1000), 'x') + re.sub(r'[^a-z0-9]', '', m['id'][:4].lower())
+            profiles.append({'id': pid, 'initials': ini, 'icon': icon})
             print('Added profile', ini, icon)
             changed = True
             continue
