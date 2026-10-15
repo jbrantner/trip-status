@@ -110,7 +110,7 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
         <p>Editing link: anyone you give it to can edit and Save. Keep it private.</p>
         <button class="btn" id="copyLink">Copy editing link</button>
       </div>
-      <button class="linkbtn" id="forget">Disconnect this device</button>
+      <button class="linkbtn" id="forget">Use a different key</button>
     </div>
     <div class="msg" id="upMsg"></div>
   </section>
@@ -206,10 +206,20 @@ function showUpload() {
   if (!m) return;
   linkToken = m[2] ? decodeURIComponent(m[2]) : '';
   ghToken = linkToken || savedToken;
-  document.getElementById('forget').hidden = !!linkToken;
   document.getElementById('keyBox').hidden = !!ghToken;
   document.getElementById('fileBox').hidden = !ghToken;
   syncEd();
+}
+// Turns a GitHub refusal into a plain sentence plus GitHub's own words, so a wrong key setting can be spotted.
+function ghFail(r, step) {
+  return r.json().catch(function () { return {}; }).then(function (j) {
+    var why = r.status === 401 ? 'GitHub does not recognize this key (it may be an old, expired or deleted one).'
+      : r.status === 403 || r.status === 404 ? 'This key cannot change trip-status. On GitHub, check that the key lists trip-status and that Contents is set to Read and write.'
+      : r.status === 409 || r.status === 422 ? 'The list changed somewhere else. Reload the page and try again.'
+      : 'GitHub refused the save.';
+    var e = new Error(why + ' (' + step + ': ' + r.status + (j.message ? ', "' + j.message + '"' : '') + ')');
+    e.gh = true; throw e;
+  });
 }
 function cleanTrips(j) {
   if (!j || j.app !== 'trip-status' || !Array.isArray(j.trips)) throw new Error('This is not a Trip Status file from Helper.');
@@ -288,7 +298,7 @@ document.getElementById('publish').onclick = function () {
   var btn = this; btn.disabled = true; upMsg("Saving…");
   var h = { 'Authorization': 'Bearer ' + ghToken, 'Accept': 'application/vnd.github+json' };
   fetch(REPO_API + '?t=' + Date.now(), { headers: h, cache: 'no-store' }).then(function (r) {
-    if (r.status === 401 || r.status === 403) throw new Error('key');
+    if (r.status === 401) return ghFail(r, 'Reading');
     return r.ok ? r.json() : null;
   }).then(function (cur) {
     var today = todayStr(); sortEd();
@@ -297,23 +307,28 @@ document.getElementById('publish').onclick = function () {
     if (cur && cur.sha) payload.sha = cur.sha;
     return fetch(REPO_API, { method: 'PUT', headers: h, body: JSON.stringify(payload) }).then(function (r) { r.body2 = body; return r; });
   }).then(function (r) {
-    if (r.status === 401 || r.status === 403) throw new Error('key');
-    if (!r.ok) throw new Error('http');
+    if (!r.ok) return ghFail(r, 'Saving');
     dirty = false; window.pubAt = Date.now(); data = r.body2; render(); drawEd();
     try { localStorage.setItem('trips-last', JSON.stringify(data)); } catch (e) {}
     upMsg('Saved. Everyone sees it within a minute or two, next time they open the app.');
   }).catch(function (err) {
     btn.disabled = false;
-    upMsg(err.message === 'key' ? 'GitHub did not accept the key. It may have expired or been deleted; ask Jordan for a new editing link.' : 'Could not save. Check the connection and try again.', true);
+    upMsg(err.gh ? err.message : 'Could not reach GitHub. Check the connection and try again.', true);
   });
 };
 window.addEventListener('beforeunload', function (e) { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 document.getElementById('saveToken').onclick = function () {
   var v = document.getElementById('token').value.trim(); if (!v) { upMsg('Paste the key first.', true); return; }
-  savedToken = v; try { localStorage.setItem('trip-status-key', v); } catch (e) {}
-  document.getElementById('token').value = ''; upMsg(''); showUpload();
+  if (!/^(github_pat_|ghp_)/.test(v)) { upMsg('That does not look like a GitHub key. It should start with github_pat_.', true); return; }
+  upMsg('Checking the key…');
+  fetch('https://api.github.com/repos/jbrantner/trip-status', { headers: { 'Authorization': 'Bearer ' + v, 'Accept': 'application/vnd.github+json' }, cache: 'no-store' })
+    .then(function (r) {
+      if (r.status === 401) return ghFail(r, 'Checking');
+      savedToken = v; try { localStorage.setItem('trip-status-key', v); } catch (e) {}
+      document.getElementById('token').value = ''; upMsg('Key connected. Make a change and tap Save to finish testing it.'); showUpload();
+    }).catch(function (err) { upMsg(err.gh ? err.message : 'Could not reach GitHub. Check the connection and try again.', true); });
 };
-document.getElementById('forget').onclick = function () { savedToken = ''; try { localStorage.removeItem('trip-status-key'); } catch (e) {} upMsg(''); showUpload(); };
+document.getElementById('forget').onclick = function () { savedToken = ''; try { localStorage.removeItem('trip-status-key'); } catch (e) {} upMsg(''); if (linkToken) location.hash = '#edit'; else showUpload(); };
 document.getElementById('copyLink').onclick = function () {
   var link = location.origin + location.pathname + '#edit=' + encodeURIComponent(ghToken);
   var done = function () { upMsg('Editing link copied. Send it only to people who should be able to edit.'); };
