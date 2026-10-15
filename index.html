@@ -496,7 +496,7 @@ function syncEd() {
   var today = todayStr();
   edP = profiles().map(function (p) { return { id: p.id, initials: p.initials, icon: p.icon }; });
   ed = ((data && data.trips) || []).filter(function (t) { return t.date >= today; }).map(function (t) { return { date: t.date, time: t.time || '', status: tripStatus(t), drivers: slots(t).slice(), label: t.label || '', who: (t.who || []).slice() }; });
-  openI = -1; sortEd(); drawEd(); drawProfiles(); checkRequests();
+  openI = -1; sortEd(); drawEd(); drawProfiles(); checkRequests(); useHelperLink();
   if (joinReq && lastChecked) { var r = joinReq; joinReq = null; addProfile(r.initials, r.icon, 'Profile request: added ' + r.icon + ' ' + r.initials + ' Tap Save to add it for everyone.'); }
 }
 function drawEd() { render(); }
@@ -586,23 +586,44 @@ document.getElementById('add').onclick = function () {
   changed();
   var o = document.querySelector('.row.open'); if (o) o.scrollIntoView({ block: 'center' });
 };
+// Puts a Helper export (file or Update link) in the editing list. Helper's data has no labels or profiles,
+// so a trip keeps what it already had here (same date and time).
+function applyHelper(j) {
+  var today = todayStr();
+  // Commit a half-typed box first: if it were still focused when the list redraws, its change would land on the new list.
+  if (document.activeElement && document.getElementById('days').contains(document.activeElement)) document.activeElement.blur();
+  openI = -1;
+  var old = {}; ed.forEach(function (t) { old[t.date + ' ' + t.time] = t; });
+  ed = cleanTrips(j).filter(function (t) { return t.date >= today; })
+    .map(function (t) { var o = old[t.date + ' ' + t.time]; if (o) { if (!t.label && o.label) t.label = o.label; t.who = (o.who || []).slice(); } return t; });
+  sortEd(); drawEd();
+  changed('Loaded ' + ed.length + ' upcoming trip' + (ed.length === 1 ? '' : 's') + ' from Helper. Check the list, then tap Save.');
+}
 document.getElementById('file').onchange = function (e) {
   var f = e.target.files[0]; if (!f) return;
   if (f.size > 100000) { upMsg('That file is too big to be a Trip Status file.', true); return; }
-  f.text().then(function (txt) {
-    var today = todayStr();
-    // Commit a half-typed box first: if it were still focused when the list redraws, its change would land on the new list.
-    if (document.activeElement && document.getElementById('days').contains(document.activeElement)) document.activeElement.blur();
-    openI = -1;
-    // Helper's file has no labels or profiles, so a trip keeps what it already had here (same date and time).
-    var old = {}; ed.forEach(function (t) { old[t.date + ' ' + t.time] = t; });
-    ed = cleanTrips(JSON.parse(txt)).filter(function (t) { return t.date >= today; })
-      .map(function (t) { var o = old[t.date + ' ' + t.time]; if (o) { if (!t.label && o.label) t.label = o.label; t.who = (o.who || []).slice(); } return t; });
-    sortEd(); drawEd();
-    changed('Loaded ' + ed.length + ' upcoming trip' + (ed.length === 1 ? '' : 's') + ' from Helper. Check the list, then tap Save.');
-  }).catch(function (err) { upMsg(err instanceof SyntaxError ? 'That file could not be read. Export it from Helper again.' : err.message, true); })
+  f.text().then(function (txt) { applyHelper(JSON.parse(txt)); })
+    .catch(function (err) { upMsg(err instanceof SyntaxError ? 'That file could not be read. Export it from Helper again.' : err.message, true); })
     .then(function () { e.target.value = ''; });
 };
+// Helper's Update button opens this page as #helper=DATA (base64url of the same JSON as its file). The part after # never
+// leaves the browser. The page waits for the published list, applies the trips, then tidies the address back to #edit.
+var helperReq = null;
+function takeHelperLink() {
+  var m = location.hash.match(/^#helper=([A-Za-z0-9_-]+)$/); if (!m) return;
+  try {
+    var b = m[1].replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
+    helperReq = JSON.parse(decodeURIComponent(escape(atob(b))));
+  } catch (e) { helperReq = 'bad'; }
+  history.replaceState(null, '', '#edit');
+}
+function useHelperLink() {
+  if (helperReq && !ghToken) { upMsg('Connect the key on this device once, then the update from Helper loads.'); return; }
+  if (!helperReq || !ghToken || !lastChecked || dirty) return;
+  var j = helperReq; helperReq = null;
+  if (j === 'bad') { upMsg('The update from Helper could not be read. Tap Update in Helper again.', true); return; }
+  try { applyHelper(j); } catch (err) { upMsg(err.message, true); }
+}
 document.getElementById('publish').onclick = function () {
   if (ed.some(function (t) { return !/^\d{4}-\d{2}-\d{2}$/.test(t.date || ''); })) { upMsg('Every trip needs a date.', true); return; }
   var btn = this; btn.disabled = true; upMsg("Saving…");
@@ -640,7 +661,7 @@ document.getElementById('saveToken').onclick = function () {
     .then(function (r) {
       if (r.status === 401) return ghFail(r, 'Checking');
       savedToken = v; try { localStorage.setItem('trip-status-key', v); } catch (e) {}
-      document.getElementById('token').value = ''; upMsg('Key connected. Make a change and tap Save to finish testing it.'); showUpload();
+      document.getElementById('token').value = ''; upMsg('Key connected. Make a change and tap Save to finish testing it.'); showUpload(); useHelperLink();
     }).catch(function (err) { upMsg(err.gh ? err.message : 'Could not reach GitHub. Check the connection and try again.', true); });
 };
 document.getElementById('forget').onclick = function () { savedToken = ''; try { localStorage.removeItem('trip-status-key'); } catch (e) {} upMsg(''); if (linkToken) location.hash = '#edit'; else showUpload(); };
@@ -650,7 +671,8 @@ document.getElementById('copyLink').onclick = function () {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { window.prompt('Copy this link:', link); });
   else window.prompt('Copy this link:', link);
 };
-window.addEventListener('hashchange', function () { handleJoin(); showUpload(); });
+window.addEventListener('hashchange', function () { takeHelperLink(); handleJoin(); showUpload(); useHelperLink(); });
+takeHelperLink();
 showUpload();
 
 render(); load();
