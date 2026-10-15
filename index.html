@@ -7,12 +7,22 @@
 <title>Trip Status</title>
 <meta name="theme-color" content="#962B42">
 <meta name="color-scheme" content="light only">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.webmanifest" id="mf">
+<script>
+// The editing screen installs as its own app ("Trip Editor") that opens straight to editing. The key is never in the
+// app's start address; this device already remembers it from the editing link.
+(function () {
+  var ed = /^#(edit|upload|helper)/.test(location.hash) || /[?&]editor\b/.test(location.search);
+  if (ed && !location.hash) history.replaceState(null, '', location.pathname + location.search + '#edit');
+  if (ed) { document.getElementById('mf').href = 'manifest-edit.webmanifest'; window.EDITOR_APP = true; }
+})();
+</script>
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Trips">
+<meta name="apple-mobile-web-app-title" content="Trips" id="atitle">
+<script>if (window.EDITOR_APP) document.getElementById('atitle').content = 'Trip Editor';</script>
 <style>
 /* One column of days; each trip is a row with its time and a status chip. */
 :root {
@@ -162,7 +172,7 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
         <li>Repository access: "Only select repositories", pick <b>trip-status</b>.</li>
         <li>Permissions: set <b>Contents</b> to "Read and write". Tap Generate and paste the key here.</li>
       </ol>
-      <input type="password" id="token" autocomplete="off" placeholder="github_pat_…" aria-label="GitHub key">
+      <input type="password" id="token" autocomplete="off" placeholder="Paste the key or your editing link" aria-label="GitHub key or editing link">
       <button class="btn" id="saveToken">Connect</button>
     </div>
     <div id="fileBox" hidden style="display:grid;gap:10px">
@@ -693,6 +703,7 @@ document.getElementById('publish').onclick = function () {
 window.addEventListener('beforeunload', function (e) { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 document.getElementById('saveToken').onclick = function () {
   var v = document.getElementById('token').value.trim(); if (!v) { upMsg('Paste the key first.', true); return; }
+  var lk = v.match(/#edit=([^&\s]+)/); if (lk) v = decodeURIComponent(lk[1]); // the whole editing link works too
   if (!/^(github_pat_|ghp_)/.test(v)) { upMsg('That does not look like a GitHub key. It should start with github_pat_.', true); return; }
   upMsg('Checking the key…');
   fetch('https://api.github.com/repos/jbrantner/trip-status', { headers: { 'Authorization': 'Bearer ' + v, 'Accept': 'application/vnd.github+json' }, cache: 'no-store' })
