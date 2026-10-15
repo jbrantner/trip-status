@@ -48,6 +48,9 @@ main { padding-block: 14px 40px }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 14px }
 .row + .row { border-top: 1px solid var(--line) }
 .time { font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums }
+.when { display: flex; flex-direction: column; min-width: 0 }
+.label { font-size: .88rem; color: var(--muted); overflow-wrap: anywhere }
+.et .lbl { grid-column: 1 / 3 }
 .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 12px; font-size: .92rem; font-weight: 600; white-space: nowrap }
 .chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor }
 .chip.Assigned { background: var(--ok-bg); color: var(--ok-fg) }
@@ -101,7 +104,7 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
       <button class="btn" id="saveToken">Connect</button>
     </div>
     <div id="fileBox" hidden style="display:grid;gap:10px">
-      <p>Change trips below, or load the Trip Status file from Helper to replace the whole list. Nothing changes for anyone until you tap Save.</p>
+      <p>Change trips below, or load the Trip Status file from Helper to replace the whole list. Nothing changes for anyone until you tap Save. Labels like "Activities" or "Trip 2" show to everyone, so leave names out.</p>
       <label class="filelbl">Load Helper file <input type="file" id="file" accept=".json,application/json"></label>
       <div id="edTrips"></div>
       <button class="btn" id="add">+ Add trip</button>
@@ -153,7 +156,7 @@ function render() {
       last = t.date;
     }
     var st = t.status === 'Assigned' ? 'Assigned' : 'Pending';
-    html += '<div class="row"><span class="time">' + esc(timeLabel(t.time)) + '</span><span class="chip ' + st + '">' + (st === 'Assigned' ? 'Driver assigned' : 'Pending') + '</span></div>';
+    html += '<div class="row"><span class="when"><span class="time">' + esc(timeLabel(t.time)) + '</span>' + (t.label ? '<span class="label">' + esc(t.label) + '</span>' : '') + '</span><span class="chip ' + st + '">' + (st === 'Assigned' ? 'Driver assigned' : 'Pending') + '</span></div>';
   });
   if (last) html += '</div></section>';
   if (!html) html = '<p class="empty">' + (data ? (onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') : 'Loading trips…') + '</p>';
@@ -226,12 +229,13 @@ function cleanTrips(j) {
   if (j.trips.length > 300) throw new Error('The file has too many trips.');
   return j.trips.map(function (t, i) {
     var keys = Object.keys(t || {});
-    if (keys.some(function (k) { return ['date', 'time', 'status'].indexOf(k) < 0; }))
-      throw new Error('Trip ' + (i + 1) + ' has extra information in it. Only date, time and status are allowed, so nothing was loaded.');
+    if (keys.some(function (k) { return ['date', 'time', 'status', 'label'].indexOf(k) < 0; }))
+      throw new Error('Trip ' + (i + 1) + ' has extra information in it. Only date, time, status and a short label are allowed, so nothing was loaded.');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(t.date || '')) throw new Error('Trip ' + (i + 1) + ' has no proper date.');
     if (t.time && !/^\d{2}:\d{2}$/.test(t.time)) throw new Error('Trip ' + (i + 1) + ' has a time in the wrong form.');
     if (t.status !== 'Pending' && t.status !== 'Assigned') throw new Error('Trip ' + (i + 1) + ' needs a status of Pending or Assigned.');
-    return { date: t.date, time: t.time || '', status: t.status };
+    if (t.label != null && (typeof t.label !== 'string' || t.label.length > 30)) throw new Error('Trip ' + (i + 1) + ' has a label longer than 30 letters.');
+    return t.label ? { date: t.date, time: t.time || '', status: t.status, label: t.label } : { date: t.date, time: t.time || '', status: t.status };
   });
 }
 // The editing list. It starts as the published list; any change, or a loaded Helper file, shows right away in
@@ -241,7 +245,7 @@ function sortEd() { ed.sort(function (a, b) { return (a.date + (a.time || '99'))
 function syncEd() {
   if (dirty || document.getElementById('upload').hidden) return;
   var today = todayStr();
-  ed = ((data && data.trips) || []).filter(function (t) { return t.date >= today; }).map(function (t) { return { date: t.date, time: t.time || '', status: t.status === 'Assigned' ? 'Assigned' : 'Pending' }; });
+  ed = ((data && data.trips) || []).filter(function (t) { return t.date >= today; }).map(function (t) { return { date: t.date, time: t.time || '', status: t.status === 'Assigned' ? 'Assigned' : 'Pending', label: t.label || '' }; });
   sortEd(); drawEd();
 }
 function drawEd() {
@@ -252,6 +256,7 @@ function drawEd() {
       '<input type="date" id="ed-d' + i + '" aria-label="Date" value="' + esc(t.date) + '">' +
       '<input type="time" id="ed-t' + i + '" aria-label="Time" value="' + esc(t.time) + '">' +
       '<button class="del" aria-label="Remove trip">×</button>' +
+      '<input type="text" class="lbl" id="ed-l' + i + '" maxlength="30" aria-label="Label" placeholder="Label (optional), no names" value="' + esc(t.label || '') + '">' +
       '<div class="seg"><button class="Pending' + (t.status !== 'Assigned' ? ' on' : '') + '">Pending</button>' +
       '<button class="Assigned' + (t.status === 'Assigned' ? ' on' : '') + '">Assigned</button></div></div>';
   }).join('');
@@ -266,6 +271,7 @@ document.getElementById('edTrips').addEventListener('change', function (e) {
   var t = ed[+row.dataset.i];
   if (e.target.type === 'date') t.date = e.target.value;
   if (e.target.type === 'time') t.time = e.target.value;
+  if (e.target.classList.contains('lbl')) t.label = e.target.value.trim().slice(0, 30);
   changed();
 });
 document.getElementById('edTrips').addEventListener('click', function (e) {
@@ -287,7 +293,12 @@ document.getElementById('file').onchange = function (e) {
   if (f.size > 100000) { upMsg('That file is too big to be a Trip Status file.', true); return; }
   f.text().then(function (txt) {
     var today = todayStr();
-    ed = cleanTrips(JSON.parse(txt)).filter(function (t) { return t.date >= today; });
+    // Commit a half-typed box first: if it were still focused when the list redraws, its change would land on the new list.
+    if (document.activeElement && document.getElementById('edTrips').contains(document.activeElement)) document.activeElement.blur();
+    // Helper's file has no labels, so a trip keeps the label it already had here (same date and time).
+    var old = {}; ed.forEach(function (t) { if (t.label) old[t.date + ' ' + t.time] = t.label; });
+    ed = cleanTrips(JSON.parse(txt)).filter(function (t) { return t.date >= today; })
+      .map(function (t) { if (!t.label && old[t.date + ' ' + t.time]) t.label = old[t.date + ' ' + t.time]; return t; });
     sortEd(); drawEd();
     changed('Loaded ' + ed.length + ' upcoming trip' + (ed.length === 1 ? '' : 's') + ' from Helper. Check the list, then tap Save.');
   }).catch(function (err) { upMsg(err instanceof SyntaxError ? 'That file could not be read. Export it from Helper again.' : err.message, true); })
@@ -302,7 +313,7 @@ document.getElementById('publish').onclick = function () {
     return r.ok ? r.json() : null;
   }).then(function (cur) {
     var today = todayStr(); sortEd();
-    var body = { updated: new Date().toISOString(), trips: ed.filter(function (t) { return t.date >= today; }).map(function (t) { return { date: t.date, time: t.time || '', status: t.status }; }) };
+    var body = { updated: new Date().toISOString(), trips: ed.filter(function (t) { return t.date >= today; }).map(function (t) { var o = { date: t.date, time: t.time || '', status: t.status }; if (t.label) o.label = t.label.slice(0, 30); return o; }) };
     var payload = { message: 'Trips: update status', content: btoa(unescape(encodeURIComponent(JSON.stringify(body, null, 1) + '\n'))) };
     if (cur && cur.sha) payload.sha = cur.sha;
     return fetch(REPO_API, { method: 'PUT', headers: h, body: JSON.stringify(payload) }).then(function (r) { r.body2 = body; return r; });
