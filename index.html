@@ -81,6 +81,29 @@ main { padding-block: 14px 40px }
 .seg button.on.Pending { background: var(--wait-bg); color: var(--wait-fg); border-color: transparent }
 .seg button.on.Assigned { background: var(--ok-bg); color: var(--ok-fg); border-color: transparent }
 .edempty { color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); padding-top: 10px }
+.who { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none }
+.who::-webkit-scrollbar { display: none }
+.who button, .pchip { flex: none; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: .92rem; font-weight: 600; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; white-space: nowrap }
+.who button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff }
+.who .lead { flex: none; align-self: center; font-size: .8rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700 }
+.icon { font-size: 1.05rem; line-height: 1 }
+.people { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px }
+.people span { font-size: .8rem; font-weight: 600; color: var(--muted); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px }
+.people span.me { color: var(--brand); border-color: var(--brand) }
+.assign { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; align-items: center }
+.assign .pchip { padding: 5px 10px; font-size: .85rem; color: var(--muted) }
+.assign .pchip.on { background: var(--brand); border-color: var(--brand); color: #fff }
+.assign small { color: var(--muted); font-size: .8rem }
+.prof { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px }
+.prof h3 { margin: 0; font-size: .95rem }
+.plist { display: flex; gap: 6px; flex-wrap: wrap }
+.plist .pchip { cursor: default }
+.plist .pchip button { font: inherit; border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 0 0 4px; font-size: 1rem }
+.padd { display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.padd input { width: 6.5em; font: inherit; padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg) }
+.icons { display: flex; gap: 4px; flex-wrap: wrap }
+.icons button { font-size: 1.25rem; width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); cursor: pointer }
+.icons button.on { border: 2px solid var(--brand2); background: var(--bg) }
 button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
 </style>
 </head>
@@ -106,6 +129,16 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
     <div id="fileBox" hidden style="display:grid;gap:10px">
       <p>Change trips below, or load the Trip Status file from Helper to replace the whole list. Nothing changes for anyone until you tap Save. Labels like "Activities" or "Trip 2" show to everyone, so leave names out.</p>
       <label class="filelbl">Load Helper file <input type="file" id="file" accept=".json,application/json"></label>
+      <div class="prof">
+        <h3>Profiles</h3>
+        <p>Initials and an icon only, like J.B. 🌸. Everyone can see these and pick theirs to see their own trips.</p>
+        <div class="plist" id="plist"></div>
+        <div class="padd">
+          <input type="text" id="pInit" maxlength="5" placeholder="J.B." aria-label="Initials">
+          <button class="btn" id="pAdd">Add profile</button>
+        </div>
+        <div class="icons" id="pIcons" role="group" aria-label="Icon"></div>
+      </div>
       <div id="edTrips"></div>
       <button class="btn" id="add">+ Add trip</button>
       <button class="btn primary" id="publish" disabled>Save</button>
@@ -118,6 +151,15 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
     <div class="msg" id="upMsg"></div>
   </section>
   <div class="warn" id="warn" hidden></div>
+  <div class="who" id="who" role="group" aria-label="View as" hidden></div>
+  <section class="up" id="make" hidden>
+    <h2>Make my profile</h2>
+    <p>Pick your initials and an icon. Jordan adds it with one tap, then choose it under View as to see your trips.</p>
+    <div class="padd"><input type="text" id="mInit" maxlength="5" placeholder="J.B." aria-label="Your initials"></div>
+    <div class="icons" id="mIcons" role="group" aria-label="Your icon"></div>
+    <button class="btn primary" id="mSend">Copy link to send Jordan</button>
+    <div class="msg" id="mMsg"></div>
+  </section>
   <div class="filters" role="group" aria-label="Show">
     <button id="f-all" aria-pressed="true">All trips</button>
     <button id="f-pending" aria-pressed="false">Pending only</button>
@@ -129,7 +171,14 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
   </div>
 </main>
 <script>
-var data = null, onlyPending = false, lastChecked = null;
+var data = null, onlyPending = false, lastChecked = null, me = '';
+var ICONS = ['🌸', '🌻', '🌵', '🍀', '🍁', '🌙', '⭐', '🔥', '🐝', '🦋', '🐢', '🐬', '🦉', '🍎', '🍋', '🎈', '⚓', '🎵'];
+try { me = localStorage.getItem('trip-status-me') || ''; } catch (e) {}
+function profiles() { return (data && Array.isArray(data.profiles)) ? data.profiles : []; }
+function profileById(id) { return profiles().filter(function (p) { return p.id === id; })[0]; }
+// Initials only, always written J.B. style, so a profile can never spell out a name.
+function normInitials(v) { var l = String(v).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3); return l ? l.split('').join('.') + '.' : ''; }
+function pLabel(p) { return '<span class="icon">' + esc(p.icon) + '</span>' + esc(p.initials); }
 try { onlyPending = localStorage.getItem('trips-filter') === 'pending'; } catch (e) {}
 
 function todayStr() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -140,8 +189,16 @@ function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&
 
 function render() {
   var today = todayStr(), tomorrow = addDays(today, 1);
-  var trips = ((data && data.trips) || []).filter(function (t) { return t.date >= today; })
+  var all = ((data && data.trips) || []).filter(function (t) { return t.date >= today; })
     .sort(function (a, b) { return (a.date + (a.time || '99')).localeCompare(b.date + (b.time || '99')); });
+  var meP = profileById(me);
+  if (data && me && !meP) me = '';
+  var who = document.getElementById('who'), ps = profiles();
+  who.hidden = !data;
+  who.innerHTML = (ps.length ? '<span class="lead">View as</span><button data-p="" aria-pressed="' + !me + '">Everyone</button>' +
+    ps.map(function (p) { return '<button data-p="' + esc(p.id) + '" aria-pressed="' + (p.id === me) + '">' + pLabel(p) + '</button>'; }).join('') : '') +
+    '<button data-make="1">+ Make my profile</button>';
+  var trips = me ? all.filter(function (t) { return (t.who || []).indexOf(me) >= 0; }) : all;
   var pend = trips.filter(function (t) { return t.status !== 'Assigned'; }).length;
   document.getElementById('sum').innerHTML = '<span><b>' + pend + '</b> Pending</span><span><b>' + (trips.length - pend) + '</b> Assigned</span>';
   document.getElementById('f-all').setAttribute('aria-pressed', !onlyPending);
@@ -156,10 +213,11 @@ function render() {
       last = t.date;
     }
     var st = t.status === 'Assigned' ? 'Assigned' : 'Pending';
-    html += '<div class="row"><span class="when"><span class="time">' + esc(timeLabel(t.time)) + '</span>' + (t.label ? '<span class="label">' + esc(t.label) + '</span>' : '') + '</span><span class="chip ' + st + '">' + (st === 'Assigned' ? 'Driver assigned' : 'Pending') + '</span></div>';
+    html += '<div class="row"><span class="when"><span class="time">' + esc(timeLabel(t.time)) + '</span>' + (t.label ? '<span class="label">' + esc(t.label) + '</span>' : '') +
+      ((t.who || []).length ? '<span class="people">' + t.who.map(function (id) { var p = profileById(id); return p ? '<span' + (id === me ? ' class="me"' : '') + '>' + esc(p.icon) + ' ' + esc(p.initials) + '</span>' : ''; }).join('') + '</span>' : '') + '</span><span class="chip ' + st + '">' + (st === 'Assigned' ? 'Driver assigned' : 'Pending') + '</span></div>';
   });
   if (last) html += '</div></section>';
-  if (!html) html = '<p class="empty">' + (data ? (onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') : 'Loading trips…') + '</p>';
+  if (!html) html = '<p class="empty">' + (!data ? 'Loading trips…' : me ? 'No upcoming trips for ' + esc(meP.initials) + (onlyPending ? ' are pending.' : '.') : onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') + '</p>';
   document.getElementById('days').innerHTML = html;
   if (data && (data.updated || data.exported)) {
     var u = new Date(data.updated || data.exported);
@@ -188,6 +246,26 @@ function load() {
     });
 }
 
+document.getElementById('who').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.make) { var m = document.getElementById('make'); m.hidden = !m.hidden; drawMake(); return; }
+  me = b.dataset.p; try { localStorage.setItem('trip-status-me', me); } catch (err) {}
+  render();
+});
+var makeIcon = ICONS[0];
+function drawMake() {
+  document.getElementById('mIcons').innerHTML = ICONS.map(function (ic) {
+    return '<button class="' + (ic === makeIcon ? 'on' : '') + '" aria-label="' + ic + '" aria-pressed="' + (ic === makeIcon) + '">' + ic + '</button>'; }).join('');
+}
+document.getElementById('mIcons').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { makeIcon = b.textContent; drawMake(); } });
+document.getElementById('mSend').onclick = function () {
+  var v = normInitials(document.getElementById('mInit').value), msg = document.getElementById('mMsg');
+  if (!v) { msg.textContent = 'Type your initials first, like J.B.'; return; }
+  var link = location.origin + location.pathname + '#join=' + encodeURIComponent(v + '|' + makeIcon);
+  var done = function () { msg.textContent = 'Copied. Text the link to Jordan. Once he adds ' + makeIcon + ' ' + v + ', pick it under View as.'; };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { msg.textContent = 'Send Jordan this link: ' + link; });
+  else msg.textContent = 'Send Jordan this link: ' + link;
+};
 document.getElementById('f-all').onclick = function () { onlyPending = false; try { localStorage.setItem('trips-filter', 'all'); } catch (e) {} render(); };
 document.getElementById('f-pending').onclick = function () { onlyPending = true; try { localStorage.setItem('trips-filter', 'pending'); } catch (e) {} render(); };
 document.getElementById('refresh').onclick = function () {
@@ -203,11 +281,24 @@ var REPO_API = 'https://api.github.com/repos/jbrantner/trip-status/contents/trip
 var ghToken = '', savedToken = '', linkToken = '';
 try { savedToken = localStorage.getItem('trip-status-key') || ''; } catch (e) {}
 function upMsg(t, bad) { var m = document.getElementById('upMsg'); m.textContent = t; m.className = 'msg' + (bad ? ' bad' : ''); }
+// A profile request link (#join=J.B.|🌸) opens the editing screen with that profile added, on a device that has the key.
+var joinReq = null;
+function handleJoin() {
+  var j = location.hash.match(/^#join=(.+)$/); if (!j) return;
+  var parts = decodeURIComponent(j[1]).split('|'), ini = normInitials(parts[0] || ''), ic = parts[1];
+  if (!ini || ICONS.indexOf(ic) < 0) return;
+  if (savedToken) { joinReq = { initials: ini, icon: ic }; history.replaceState(null, '', '#edit'); }
+  else { var w = document.getElementById('warn'); w.textContent = 'This is a profile request (' + ic + ' ' + ini + '). Send the link to Jordan to add it.'; w.hidden = false; history.replaceState(null, '', location.pathname); }
+  if (joinReq && dirty) { var r = joinReq; joinReq = null; addProfile(r.initials, r.icon, 'Profile request: added ' + r.icon + ' ' + r.initials + ' Tap Save to add it for everyone.'); }
+}
+handleJoin();
 function showUpload() {
   var m = location.hash.match(/^#(edit|upload)(?:=(.+))?$/);
   document.getElementById('upload').hidden = !m;
   if (!m) return;
   linkToken = m[2] ? decodeURIComponent(m[2]) : '';
+  // Remember an editing link's key on this device, so a profile request opened here later lands on the editing screen.
+  if (linkToken && linkToken !== savedToken) { savedToken = linkToken; try { localStorage.setItem('trip-status-key', linkToken); } catch (e) {} }
   ghToken = linkToken || savedToken;
   document.getElementById('keyBox').hidden = !!ghToken;
   document.getElementById('fileBox').hidden = !ghToken;
@@ -240,13 +331,15 @@ function cleanTrips(j) {
 }
 // The editing list. It starts as the published list; any change, or a loaded Helper file, shows right away in
 // the list underneath as a preview, and nothing is saved until Save.
-var ed = [], dirty = false;
+var ed = [], edP = [], dirty = false, pickIcon = ICONS[0];
 function sortEd() { ed.sort(function (a, b) { return (a.date + (a.time || '99')).localeCompare(b.date + (b.time || '99')); }); }
 function syncEd() {
   if (dirty || document.getElementById('upload').hidden) return;
   var today = todayStr();
-  ed = ((data && data.trips) || []).filter(function (t) { return t.date >= today; }).map(function (t) { return { date: t.date, time: t.time || '', status: t.status === 'Assigned' ? 'Assigned' : 'Pending', label: t.label || '' }; });
-  sortEd(); drawEd();
+  edP = profiles().map(function (p) { return { id: p.id, initials: p.initials, icon: p.icon }; });
+  ed = ((data && data.trips) || []).filter(function (t) { return t.date >= today; }).map(function (t) { return { date: t.date, time: t.time || '', status: t.status === 'Assigned' ? 'Assigned' : 'Pending', label: t.label || '', who: (t.who || []).slice() }; });
+  sortEd(); drawEd(); drawProfiles();
+  if (joinReq && lastChecked) { var r = joinReq; joinReq = null; addProfile(r.initials, r.icon, 'Profile request: added ' + r.icon + ' ' + r.initials + ' Tap Save to add it for everyone.'); }
 }
 function drawEd() {
   var box = document.getElementById('edTrips');
@@ -257,12 +350,14 @@ function drawEd() {
       '<input type="time" id="ed-t' + i + '" aria-label="Time" value="' + esc(t.time) + '">' +
       '<button class="del" aria-label="Remove trip">×</button>' +
       '<input type="text" class="lbl" id="ed-l' + i + '" maxlength="30" aria-label="Label" placeholder="Label (optional), no names" value="' + esc(t.label || '') + '">' +
+      (edP.length ? '<div class="assign"><small>Driver:</small>' + edP.map(function (p) {
+        return '<button class="pchip' + ((t.who || []).indexOf(p.id) >= 0 ? ' on' : '') + '" data-p="' + esc(p.id) + '">' + pLabel(p) + '</button>'; }).join('') + '</div>' : '') +
       '<div class="seg"><button class="Pending' + (t.status !== 'Assigned' ? ' on' : '') + '">Pending</button>' +
       '<button class="Assigned' + (t.status === 'Assigned' ? ' on' : '') + '">Assigned</button></div></div>';
   }).join('');
 }
 function changed(note) {
-  dirty = true; data = { updated: new Date().toISOString(), trips: ed.slice() }; render();
+  dirty = true; data = { updated: new Date().toISOString(), profiles: edP.slice(), trips: ed.slice() }; render();
   document.getElementById('publish').disabled = false;
   upMsg(note || 'Not saved yet. The list below shows what everyone will see.');
 }
@@ -278,9 +373,44 @@ document.getElementById('edTrips').addEventListener('click', function (e) {
   var row = e.target.closest('.et'); if (!row) return;
   var i = +row.dataset.i;
   if (e.target.classList.contains('del')) { ed.splice(i, 1); drawEd(); changed(); return; }
+  var pc = e.target.closest('.pchip');
+  if (pc) {
+    var w = ed[i].who = ed[i].who || [], k = w.indexOf(pc.dataset.p);
+    if (k >= 0) w.splice(k, 1); else w.push(pc.dataset.p);
+    drawEd(); changed(); return;
+  }
   if (e.target.closest('.seg') && e.target.tagName === 'BUTTON') {
     ed[i].status = e.target.classList.contains('Assigned') ? 'Assigned' : 'Pending'; drawEd(); changed();
   }
+});
+function drawProfiles() {
+  document.getElementById('plist').innerHTML = edP.length ? edP.map(function (p) {
+    return '<span class="pchip">' + pLabel(p) + '<button data-p="' + esc(p.id) + '" aria-label="Remove ' + esc(p.initials) + '">×</button></span>'; }).join('')
+    : '<p>No profiles yet.</p>';
+  document.getElementById('pIcons').innerHTML = ICONS.map(function (ic) {
+    return '<button class="' + (ic === pickIcon ? 'on' : '') + '" aria-label="' + ic + '" aria-pressed="' + (ic === pickIcon) + '">' + ic + '</button>'; }).join('');
+}
+document.getElementById('pIcons').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return; pickIcon = b.textContent; drawProfiles();
+});
+document.getElementById('pAdd').onclick = function () {
+  var v = normInitials(document.getElementById('pInit').value);
+  if (!v) { upMsg('Type initials, like J.B. (up to 3 letters).', true); return; }
+  if (edP.some(function (p) { return p.initials === v && p.icon === pickIcon; })) { upMsg('That profile already exists.', true); return; }
+  addProfile(v, pickIcon, 'Added ' + pickIcon + ' ' + v + ' Tap it on a trip to assign it, then Save.');
+  document.getElementById('pInit').value = '';
+};
+function addProfile(initials, icon, note) {
+  if (edP.some(function (p) { return p.initials === initials && p.icon === icon; })) { upMsg(icon + ' ' + initials + ' is already a profile.', true); return; }
+  edP.push({ id: 'p' + Date.now().toString(36), initials: initials, icon: icon });
+  drawProfiles(); drawEd(); changed(note);
+}
+document.getElementById('plist').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  var id = b.dataset.p;
+  edP = edP.filter(function (p) { return p.id !== id; });
+  ed.forEach(function (t) { if (t.who) t.who = t.who.filter(function (x) { return x !== id; }); });
+  drawProfiles(); drawEd(); changed();
 });
 document.getElementById('add').onclick = function () {
   var last = ed[ed.length - 1];
@@ -295,10 +425,10 @@ document.getElementById('file').onchange = function (e) {
     var today = todayStr();
     // Commit a half-typed box first: if it were still focused when the list redraws, its change would land on the new list.
     if (document.activeElement && document.getElementById('edTrips').contains(document.activeElement)) document.activeElement.blur();
-    // Helper's file has no labels, so a trip keeps the label it already had here (same date and time).
-    var old = {}; ed.forEach(function (t) { if (t.label) old[t.date + ' ' + t.time] = t.label; });
+    // Helper's file has no labels or profiles, so a trip keeps what it already had here (same date and time).
+    var old = {}; ed.forEach(function (t) { old[t.date + ' ' + t.time] = t; });
     ed = cleanTrips(JSON.parse(txt)).filter(function (t) { return t.date >= today; })
-      .map(function (t) { if (!t.label && old[t.date + ' ' + t.time]) t.label = old[t.date + ' ' + t.time]; return t; });
+      .map(function (t) { var o = old[t.date + ' ' + t.time]; if (o) { if (!t.label && o.label) t.label = o.label; t.who = (o.who || []).slice(); } return t; });
     sortEd(); drawEd();
     changed('Loaded ' + ed.length + ' upcoming trip' + (ed.length === 1 ? '' : 's') + ' from Helper. Check the list, then tap Save.');
   }).catch(function (err) { upMsg(err instanceof SyntaxError ? 'That file could not be read. Export it from Helper again.' : err.message, true); })
@@ -313,7 +443,11 @@ document.getElementById('publish').onclick = function () {
     return r.ok ? r.json() : null;
   }).then(function (cur) {
     var today = todayStr(); sortEd();
-    var body = { updated: new Date().toISOString(), trips: ed.filter(function (t) { return t.date >= today; }).map(function (t) { var o = { date: t.date, time: t.time || '', status: t.status }; if (t.label) o.label = t.label.slice(0, 30); return o; }) };
+    var body = { updated: new Date().toISOString(), trips: ed.filter(function (t) { return t.date >= today; }).map(function (t) {
+      var o = { date: t.date, time: t.time || '', status: t.status }; if (t.label) o.label = t.label.slice(0, 30);
+      var w = (t.who || []).filter(function (id) { return edP.some(function (p) { return p.id === id; }); }); if (w.length) o.who = w;
+      return o; }) };
+    body.profiles = edP.map(function (p) { return { id: p.id, initials: p.initials, icon: p.icon }; });
     var payload = { message: 'Trips: update status', content: btoa(unescape(encodeURIComponent(JSON.stringify(body, null, 1) + '\n'))) };
     if (cur && cur.sha) payload.sha = cur.sha;
     return fetch(REPO_API, { method: 'PUT', headers: h, body: JSON.stringify(payload) }).then(function (r) { r.body2 = body; return r; });
@@ -346,7 +480,7 @@ document.getElementById('copyLink').onclick = function () {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { window.prompt('Copy this link:', link); });
   else window.prompt('Copy this link:', link);
 };
-window.addEventListener('hashchange', showUpload);
+window.addEventListener('hashchange', function () { handleJoin(); showUpload(); });
 showUpload();
 
 render(); load();
