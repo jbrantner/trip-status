@@ -131,10 +131,11 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
       <label class="filelbl">Load Helper file <input type="file" id="file" accept=".json,application/json"></label>
       <div class="prof">
         <h3>Profiles</h3>
-        <p>Initials and an icon only, like J.B. 🌸. Everyone can see these and pick theirs to see their own trips.</p>
+        <p>Type a name and pick an icon. Only the initials are kept, like J.B. 🌸. Everyone can see these and pick theirs to see their own trips.</p>
         <div class="plist" id="plist"></div>
         <div class="padd">
-          <input type="text" id="pInit" maxlength="5" placeholder="J.B." aria-label="Initials">
+          <input type="text" id="pFirst" maxlength="30" placeholder="First name" aria-label="First name" autocomplete="off">
+          <input type="text" id="pLast" maxlength="30" placeholder="Last name" aria-label="Last name" autocomplete="off">
           <button class="btn" id="pAdd">Add profile</button>
         </div>
         <div class="icons" id="pIcons" role="group" aria-label="Icon"></div>
@@ -154,8 +155,12 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
   <div class="who" id="who" role="group" aria-label="View as" hidden></div>
   <section class="up" id="make" hidden>
     <h2>Make my profile</h2>
-    <p>Pick your initials and an icon. Jordan adds it with one tap, then choose it under View as to see your trips.</p>
-    <div class="padd"><input type="text" id="mInit" maxlength="5" placeholder="J.B." aria-label="Your initials"></div>
+    <p>Type your name and pick an icon. Only your initials are kept (like J.B.). Your name never leaves this screen and isn't saved.</p>
+    <div class="padd">
+      <input type="text" id="mFirst" maxlength="30" placeholder="First name" aria-label="First name" autocomplete="off">
+      <input type="text" id="mLast" maxlength="30" placeholder="Last name" aria-label="Last name" autocomplete="off">
+    </div>
+    <p class="msg" id="mPreview"></p>
     <div class="icons" id="mIcons" role="group" aria-label="Your icon"></div>
     <button class="btn primary" id="mSend">Copy link to send Jordan</button>
     <div class="msg" id="mMsg"></div>
@@ -178,6 +183,11 @@ function profiles() { return (data && Array.isArray(data.profiles)) ? data.profi
 function profileById(id) { return profiles().filter(function (p) { return p.id === id; })[0]; }
 // Initials only, always written J.B. style, so a profile can never spell out a name.
 function normInitials(v) { var l = String(v).toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3); return l ? l.split('').join('.') + '.' : ''; }
+// First letter of the first and last name only. The names themselves are never stored or sent.
+function nameInitials(first, last) {
+  var a = String(first).trim().toUpperCase().replace(/[^A-Z]/g, '').charAt(0), b = String(last).trim().toUpperCase().replace(/[^A-Z]/g, '').charAt(0);
+  return a && b ? a + '.' + b + '.' : '';
+}
 function pLabel(p) { return '<span class="icon">' + esc(p.icon) + '</span>' + esc(p.initials); }
 try { onlyPending = localStorage.getItem('trips-filter') === 'pending'; } catch (e) {}
 
@@ -257,10 +267,17 @@ function drawMake() {
   document.getElementById('mIcons').innerHTML = ICONS.map(function (ic) {
     return '<button class="' + (ic === makeIcon ? 'on' : '') + '" aria-label="' + ic + '" aria-pressed="' + (ic === makeIcon) + '">' + ic + '</button>'; }).join('');
 }
-document.getElementById('mIcons').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { makeIcon = b.textContent; drawMake(); } });
+function makePreview() {
+  var v = nameInitials(document.getElementById('mFirst').value, document.getElementById('mLast').value);
+  document.getElementById('mPreview').textContent = v ? 'Your profile: ' + makeIcon + ' ' + v : '';
+}
+document.getElementById('mFirst').addEventListener('input', makePreview);
+document.getElementById('mLast').addEventListener('input', makePreview);
+document.getElementById('mIcons').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { makeIcon = b.textContent; drawMake(); makePreview(); } });
 document.getElementById('mSend').onclick = function () {
-  var v = normInitials(document.getElementById('mInit').value), msg = document.getElementById('mMsg');
-  if (!v) { msg.textContent = 'Type your initials first, like J.B.'; return; }
+  var v = nameInitials(document.getElementById('mFirst').value, document.getElementById('mLast').value), msg = document.getElementById('mMsg');
+  if (!v) { msg.textContent = 'Type your first and last name first.'; return; }
+  document.getElementById('mFirst').value = ''; document.getElementById('mLast').value = '';
   var link = location.origin + location.pathname + '#join=' + encodeURIComponent(v + '|' + makeIcon);
   var done = function () { msg.textContent = 'Copied. Text the link to Jordan. Once he adds ' + makeIcon + ' ' + v + ', pick it under View as.'; };
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { msg.textContent = 'Send Jordan this link: ' + link; });
@@ -394,11 +411,11 @@ document.getElementById('pIcons').addEventListener('click', function (e) {
   var b = e.target.closest('button'); if (!b) return; pickIcon = b.textContent; drawProfiles();
 });
 document.getElementById('pAdd').onclick = function () {
-  var v = normInitials(document.getElementById('pInit').value);
-  if (!v) { upMsg('Type initials, like J.B. (up to 3 letters).', true); return; }
+  var v = nameInitials(document.getElementById('pFirst').value, document.getElementById('pLast').value);
+  if (!v) { upMsg('Type a first and last name. Only the initials are kept.', true); return; }
   if (edP.some(function (p) { return p.initials === v && p.icon === pickIcon; })) { upMsg('That profile already exists.', true); return; }
   addProfile(v, pickIcon, 'Added ' + pickIcon + ' ' + v + ' Tap it on a trip to assign it, then Save.');
-  document.getElementById('pInit').value = '';
+  document.getElementById('pFirst').value = ''; document.getElementById('pLast').value = '';
 };
 function addProfile(initials, icon, note) {
   if (edP.some(function (p) { return p.initials === initials && p.icon === icon; })) { upMsg(icon + ' ' + initials + ' is already a profile.', true); return; }
