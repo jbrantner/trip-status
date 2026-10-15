@@ -607,7 +607,7 @@ document.getElementById('file').onchange = function (e) {
     .then(function () { e.target.value = ''; });
 };
 // Helper's Update button opens this page as #helper=DATA (base64url of the same JSON as its file). The part after # never
-// leaves the browser. The page waits for the published list, applies the trips, then tidies the address back to #edit.
+// leaves the browser. The page waits for the published list, applies the trips, saves, then tidies the address back to #edit.
 var helperReq = null;
 function takeHelperLink() {
   var m = location.hash.match(/^#helper=([A-Za-z0-9_-]+)$/); if (!m) return;
@@ -622,7 +622,9 @@ function useHelperLink() {
   if (!helperReq || !ghToken || !lastChecked || dirty) return;
   var j = helperReq; helperReq = null;
   if (j === 'bad') { upMsg('The update from Helper could not be read. Tap Update in Helper again.', true); return; }
-  try { applyHelper(j); } catch (err) { upMsg(err.message, true); }
+  // Jordan works from Helper, so an Update from Helper saves straight away; managers still edit here by hand.
+  try { applyHelper(j); } catch (err) { upMsg(err.message, true); return; }
+  document.getElementById('publish').click();
 }
 document.getElementById('publish').onclick = function () {
   if (ed.some(function (t) { return !/^\d{4}-\d{2}-\d{2}$/.test(t.date || ''); })) { upMsg('Every trip needs a date.', true); return; }
