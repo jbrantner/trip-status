@@ -129,6 +129,11 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
     <div id="fileBox" hidden style="display:grid;gap:10px">
       <p>Change trips below, or load the Trip Status file from Helper to replace the whole list. Nothing changes for anyone until you tap Save. Labels like "Activities" or "Trip 2" show to everyone, so leave names out.</p>
       <label class="filelbl">Load Helper file <input type="file" id="file" accept=".json,application/json"></label>
+      <div class="prof" id="reqBox" hidden>
+        <h3>Profile requests</h3>
+        <div class="plist" id="reqList"></div>
+        <button class="btn primary" id="reqUpdate">Update</button>
+      </div>
       <div class="prof">
         <h3>Profiles</h3>
         <p>Type a name and pick an icon. Only the initials are kept, like J.B. 🌸. Everyone can see these and pick theirs to see their own trips.</p>
@@ -155,14 +160,14 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
   <div class="who" id="who" role="group" aria-label="View as" hidden></div>
   <section class="up" id="make" hidden>
     <h2>Make my profile</h2>
-    <p>Type your name and pick an icon. Only your initials are kept (like J.B.). Your name never leaves this screen and isn't saved.</p>
+    <p>Type your name, pick an icon and tap Apply. Only your initials are sent (like J.B.). Your name never leaves this screen and isn't saved.</p>
     <div class="padd">
       <input type="text" id="mFirst" maxlength="30" placeholder="First name" aria-label="First name" autocomplete="off">
       <input type="text" id="mLast" maxlength="30" placeholder="Last name" aria-label="Last name" autocomplete="off">
     </div>
     <p class="msg" id="mPreview"></p>
     <div class="icons" id="mIcons" role="group" aria-label="Your icon"></div>
-    <button class="btn primary" id="mSend">Copy link to send Jordan</button>
+    <button class="btn primary" id="mSend">Apply</button>
     <div class="msg" id="mMsg"></div>
   </section>
   <div class="filters" role="group" aria-label="Show">
@@ -274,14 +279,21 @@ function makePreview() {
 document.getElementById('mFirst').addEventListener('input', makePreview);
 document.getElementById('mLast').addEventListener('input', makePreview);
 document.getElementById('mIcons').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) { makeIcon = b.textContent; drawMake(); makePreview(); } });
+// Profile requests go through ntfy.sh, a free public message service: the phone posts "J.B. 🌸" to this topic and
+// Jordan's editing screen reads it back. Only initials and an icon are ever sent, and ntfy keeps them about 12 hours.
+var INBOX = 'https://ntfy.sh/trip-status-1e4522bd34bd56bb';
 document.getElementById('mSend').onclick = function () {
   var v = nameInitials(document.getElementById('mFirst').value, document.getElementById('mLast').value), msg = document.getElementById('mMsg');
   if (!v) { msg.textContent = 'Type your first and last name first.'; return; }
-  document.getElementById('mFirst').value = ''; document.getElementById('mLast').value = '';
-  var link = location.origin + location.pathname + '#join=' + encodeURIComponent(v + '|' + makeIcon);
-  var done = function () { msg.textContent = 'Copied. Text the link to Jordan. Once he adds ' + makeIcon + ' ' + v + ', pick it under View as.'; };
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { msg.textContent = 'Send Jordan this link: ' + link; });
-  else msg.textContent = 'Send Jordan this link: ' + link;
+  document.getElementById('mFirst').value = ''; document.getElementById('mLast').value = ''; makePreview();
+  var btn = this; btn.disabled = true; msg.textContent = 'Sending…';
+  fetch(INBOX, { method: 'POST', body: 'Profile request: ' + v + ' ' + makeIcon })
+    .then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      msg.textContent = 'Sent. Once Jordan adds ' + makeIcon + ' ' + v + ', pick it under View as.';
+    })
+    .catch(function () { msg.textContent = 'Could not send. Check your connection and tap Apply again.'; })
+    .then(function () { setTimeout(function () { btn.disabled = false; }, 3000); });
 };
 document.getElementById('f-all').onclick = function () { onlyPending = false; try { localStorage.setItem('trips-filter', 'all'); } catch (e) {} render(); };
 document.getElementById('f-pending').onclick = function () { onlyPending = true; try { localStorage.setItem('trips-filter', 'pending'); } catch (e) {} render(); };
@@ -289,7 +301,7 @@ document.getElementById('refresh').onclick = function () {
   var b = this; b.textContent = 'Checking…'; b.disabled = true;
   load(); setTimeout(function () { b.textContent = 'Refresh'; b.disabled = false; }, 800);
 };
-document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
+document.addEventListener('visibilitychange', function () { if (!document.hidden) { load(); if (typeof checkRequests === 'function') checkRequests(); } });
 setInterval(function () { if (!document.hidden) load(); }, 120000);
 // Hidden editing screen. Everyone else only sees the list. Open the page with #edit=KEY (the editing link, which
 // carries the GitHub key so anyone holding it can save) or with #edit on a device where the key was pasted once.
@@ -309,6 +321,44 @@ function handleJoin() {
   if (joinReq && dirty) { var r = joinReq; joinReq = null; addProfile(r.initials, r.icon, 'Profile request: added ' + r.icon + ' ' + r.initials + ' Tap Save to add it for everyone.'); }
 }
 handleJoin();
+var requests = [];
+function handledReqs() { try { return JSON.parse(localStorage.getItem('trip-status-handled') || '[]'); } catch (e) { return []; } }
+function markHandled(ids) { var h = handledReqs().concat(ids).slice(-300); try { localStorage.setItem('trip-status-handled', JSON.stringify(h)); } catch (e) {} }
+function checkRequests() {
+  if (!ghToken || document.getElementById('upload').hidden) return;
+  fetch(INBOX + '/json?poll=1&since=24h', { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (txt) {
+    var done = handledReqs(), seen = {};
+    requests = txt.split('\n').map(function (l) { try { return JSON.parse(l); } catch (e) { return null; } })
+      .filter(function (m) { return m && m.event === 'message' && done.indexOf(m.id) < 0; })
+      .map(function (m) {
+        var x = String(m.message || '').match(/^Profile request: ([A-Z]\.[A-Z]\.) (\S+)$/);
+        return x && ICONS.indexOf(x[2]) >= 0 ? { id: m.id, initials: x[1], icon: x[2] } : null;
+      })
+      .filter(function (q) {
+        if (!q) return false;
+        var key = q.initials + q.icon;
+        if (seen[key] || edP.some(function (p) { return p.initials === q.initials && p.icon === q.icon; })) return false;
+        return (seen[key] = true);
+      });
+    drawRequests();
+  }).catch(function () {});
+}
+function drawRequests() {
+  document.getElementById('reqBox').hidden = !requests.length;
+  document.getElementById('reqList').innerHTML = requests.map(function (q) {
+    return '<span class="pchip">' + pLabel(q) + '<button data-r="' + esc(q.id) + '" aria-label="Ignore ' + esc(q.initials) + '">×</button></span>'; }).join('');
+}
+document.getElementById('reqList').addEventListener('click', function (e) {
+  var b = e.target.closest('button'); if (!b) return;
+  markHandled([b.dataset.r]); requests = requests.filter(function (q) { return q.id !== b.dataset.r; }); drawRequests();
+});
+document.getElementById('reqUpdate').onclick = function () {
+  var add = requests.slice(); if (!add.length) return;
+  add.forEach(function (q) { if (!edP.some(function (p) { return p.initials === q.initials && p.icon === q.icon; })) edP.push({ id: 'p' + Date.now().toString(36) + q.id.slice(0, 4), initials: q.initials, icon: q.icon }); });
+  markHandled(add.map(function (q) { return q.id; })); requests = []; drawRequests();
+  drawProfiles(); drawEd(); changed();
+  document.getElementById('publish').click();
+};
 function showUpload() {
   var m = location.hash.match(/^#(edit|upload)(?:=(.+))?$/);
   document.getElementById('upload').hidden = !m;
@@ -355,7 +405,7 @@ function syncEd() {
   var today = todayStr();
   edP = profiles().map(function (p) { return { id: p.id, initials: p.initials, icon: p.icon }; });
   ed = ((data && data.trips) || []).filter(function (t) { return t.date >= today; }).map(function (t) { return { date: t.date, time: t.time || '', status: t.status === 'Assigned' ? 'Assigned' : 'Pending', label: t.label || '', who: (t.who || []).slice() }; });
-  sortEd(); drawEd(); drawProfiles();
+  sortEd(); drawEd(); drawProfiles(); checkRequests();
   if (joinReq && lastChecked) { var r = joinReq; joinReq = null; addProfile(r.initials, r.icon, 'Profile request: added ' + r.icon + ' ' + r.initials + ' Tap Save to add it for everyone.'); }
 }
 function drawEd() {
