@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Trip Status</title>
 <meta name="theme-color" content="#962B42">
+<meta name="color-scheme" content="light only">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
@@ -21,12 +22,6 @@
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #1b1517; --card: #261d20; --fg: #f3eaec; --muted: #b29fa4; --line: #3a2d31;
-  --bad: #ff8a80; --ok-bg: #173523; --ok-fg: #7fd99a; --wait-bg: #3a2c10; --wait-fg: #f2c66b; color-scheme: dark } }
-:root[data-theme="dark"] {
-  --bg: #1b1517; --card: #261d20; --fg: #f3eaec; --muted: #b29fa4; --line: #3a2d31;
-  --bad: #ff8a80; --ok-bg: #173523; --ok-fg: #7fd99a; --wait-bg: #3a2c10; --wait-fg: #f2c66b; color-scheme: dark }
 * { box-sizing: border-box }
 [hidden] { display: none !important }
 html, body { margin: 0 }
