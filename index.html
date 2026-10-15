@@ -608,7 +608,7 @@ document.getElementById('file').onchange = function (e) {
 };
 // Helper's Update button opens this page as #helper=DATA (base64url of the same JSON as its file). The part after # never
 // leaves the browser. The page waits for the published list, applies the trips, saves, then tidies the address back to #edit.
-var helperReq = null;
+var helperReq = null, fromHelper = false;
 function takeHelperLink() {
   var m = location.hash.match(/^#helper=([A-Za-z0-9_-]+)$/); if (!m) return;
   try {
@@ -624,7 +624,7 @@ function useHelperLink() {
   if (j === 'bad') { upMsg('The update from Helper could not be read. Tap Update in Helper again.', true); return; }
   // Jordan works from Helper, so an Update from Helper saves straight away; managers still edit here by hand.
   try { applyHelper(j); } catch (err) { upMsg(err.message, true); return; }
-  document.getElementById('publish').click();
+  fromHelper = true; document.getElementById('publish').click();
 }
 document.getElementById('publish').onclick = function () {
   if (ed.some(function (t) { return !/^\d{4}-\d{2}-\d{2}$/.test(t.date || ''); })) { upMsg('Every trip needs a date.', true); return; }
@@ -649,8 +649,10 @@ document.getElementById('publish').onclick = function () {
     dirty = false; window.pubAt = Date.now(); data = r.body2; render(); drawEd();
     try { localStorage.setItem('trips-last', JSON.stringify(data)); } catch (e) {}
     upMsg('Saved. Everyone sees it within a minute or two, next time they open the app.');
+    // Opened by Helper's Update button: close this tab once saved. Browsers only allow it for tabs a page opened.
+    if (fromHelper) { fromHelper = false; upMsg('Saved for everyone. This tab closes by itself.'); setTimeout(function () { window.close(); setTimeout(function () { upMsg('Saved for everyone. You can close this tab.'); }, 500); }, 1500); }
   }).catch(function (err) {
-    btn.disabled = false;
+    btn.disabled = false; fromHelper = false;
     upMsg(err.gh ? err.message : 'Could not reach GitHub. Check the connection and try again.', true);
   });
 };
