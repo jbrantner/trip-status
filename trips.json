@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-15T22:38:57.960Z",
+ "updated": "2026-10-15T23:19:06.272Z",
  "trips": [
   {
    "date": "2026-10-15",
@@ -34,12 +34,20 @@
   {
    "date": "2026-10-22",
    "time": "09:45",
-   "status": "Assigned"
+   "status": "Assigned",
+   "drivers": [
+    "Assigned",
+    "Assigned"
+   ]
   },
   {
    "date": "2026-10-22",
    "time": "11:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "drivers": [
+    "Assigned",
+    "Assigned"
+   ]
   },
   {
    "date": "2026-10-24",
@@ -64,7 +72,11 @@
   {
    "date": "2026-10-30",
    "time": "08:00",
-   "status": "Assigned"
+   "status": "Assigned",
+   "drivers": [
+    "Assigned",
+    "Assigned"
+   ]
   },
   {
    "date": "2026-11-01",
@@ -139,7 +151,11 @@
   {
    "date": "2026-12-12",
    "time": "08:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "drivers": [
+    "Assigned",
+    "Assigned"
+   ]
   },
   {
    "date": "2026-12-12",
