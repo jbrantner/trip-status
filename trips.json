@@ -1,4 +1,215 @@
 {
- "updated": "2026-10-15T20:47:05Z",
- "trips": []
+ "updated": "2026-10-15T22:17:54.622Z",
+ "trips": [
+  {
+   "date": "2026-10-15",
+   "time": "09:45",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-16",
+   "time": "13:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-21",
+   "time": "08:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-21",
+   "time": "12:45",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-21",
+   "time": "14:00",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-22",
+   "time": "09:45",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-22",
+   "time": "09:45",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-22",
+   "time": "11:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-24",
+   "time": "08:30",
+   "status": "Pending"
+  },
+  {
+   "date": "2026-10-24",
+   "time": "08:45",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-26",
+   "time": "11:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-28",
+   "time": "10:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-10-30",
+   "time": "08:00",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-11-01",
+   "time": "13:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-11-04",
+   "time": "07:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-11-04",
+   "time": "08:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-11-05",
+   "time": "15:34",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-11-11",
+   "time": "10:00",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-11-12",
+   "time": "15:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-11-12",
+   "time": "15:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-11-17",
+   "time": "09:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-11-24",
+   "time": "10:45",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-11-25",
+   "time": "08:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-12-02",
+   "time": "16:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-12-09",
+   "time": "09:45",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-12-09",
+   "time": "16:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-12-10",
+   "time": "09:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-12-12",
+   "time": "08:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-12-12",
+   "time": "08:30",
+   "status": "Pending"
+  },
+  {
+   "date": "2026-12-12",
+   "time": "08:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-12-13",
+   "time": "14:00",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-12-16",
+   "time": "08:45",
+   "status": "Assigned"
+  },
+  {
+   "date": "2026-12-22",
+   "time": "10:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2027-01-14",
+   "time": "14:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2027-02-16",
+   "time": "14:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2027-03-11",
+   "time": "15:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2027-04-21",
+   "time": "07:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2027-04-29",
+   "time": "11:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2027-04-30",
+   "time": "08:20",
+   "status": "Assigned"
+  },
+  {
+   "date": "2027-05-13",
+   "time": "08:30",
+   "status": "Assigned"
+  },
+  {
+   "date": "2027-05-18",
+   "time": "15:15",
+   "status": "Assigned"
+  },
+  {
+   "date": "2027-06-17",
+   "time": "11:15",
+   "status": "Pending"
+  }
+ ]
 }
