@@ -271,6 +271,11 @@ function render() {
     ps.map(function (p) { return '<button data-p="' + esc(p.id) + '" aria-pressed="' + (p.id === me) + '">' + pLabel(p) + '</button>'; }).join('') : '') +
     '<button data-make="1">+ Make my profile</button>';
   if (!me) onlyMine = false;
+  // Requesters only see the list (and My trips once they pick a profile); the counts and Pending only are for the editing screen.
+  if (!edm) onlyPending = false;
+  document.getElementById('f-pending').hidden = !edm;
+  document.getElementById('sum').hidden = !edm;
+  document.querySelector('.filters').hidden = !edm && !me;
   var trips = onlyMine ? all.filter(function (t) { return (t.who || []).indexOf(me) >= 0 || isFollowed(t); }) : all;
   document.getElementById('f-mine').hidden = !me;
   document.getElementById('f-mine').setAttribute('aria-pressed', onlyMine);
