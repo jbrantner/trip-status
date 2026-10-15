@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trip Status</title>
+<meta name="theme-color" content="#962B42">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Trips">
+<style>
+/* One column of days; each trip is a row with its time and a status chip. */
+:root {
+  --bg: #f7f3f4; --card: #ffffff; --fg: #2a1f22; --muted: #77666b; --line: #e8dfe1;
+  --brand: #962B42; --brand2: #C05133;
+  --bad: #b3261e; --ok-bg: #e3f3e6; --ok-fg: #1d6b32; --wait-bg: #fff1d6; --wait-fg: #8a5a00;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1b1517; --card: #261d20; --fg: #f3eaec; --muted: #b29fa4; --line: #3a2d31;
+  --bad: #ff8a80; --ok-bg: #173523; --ok-fg: #7fd99a; --wait-bg: #3a2c10; --wait-fg: #f2c66b; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1b1517; --card: #261d20; --fg: #f3eaec; --muted: #b29fa4; --line: #3a2d31;
+  --bad: #ff8a80; --ok-bg: #173523; --ok-fg: #7fd99a; --wait-bg: #3a2c10; --wait-fg: #f2c66b; color-scheme: dark }
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { margin: 0 }
+body { background: var(--bg); color: var(--fg); font: 16px/1.4 var(--font); -webkit-text-size-adjust: 100% }
+header { background: var(--brand); color: #fff; padding-top: calc(env(safe-area-inset-top, 0px) + 14px); padding-bottom: 16px }
+.wrap { max-width: 560px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+h1 { margin: 0; font-size: 1.45rem; letter-spacing: .2px }
+.sum { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px }
+.sum span { background: rgba(255,255,255,.16); border-radius: 999px; padding: 4px 11px; font-size: .9rem; font-variant-numeric: tabular-nums }
+.sum b { font-weight: 700 }
+main { padding-block: 14px 40px }
+.filters { display: flex; gap: 8px; margin-bottom: 14px }
+.filters button { flex: 1; font: inherit; font-size: .95rem; padding: 9px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer }
+.filters button[aria-pressed="true"] { background: var(--brand2); border-color: var(--brand2); color: #fff; font-weight: 600 }
+.day { margin-bottom: 16px }
+.day h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .7px; color: var(--muted); margin: 0 0 6px 2px; font-weight: 700 }
+.day h2 em { font-style: normal; color: var(--brand2); margin-right: 6px }
+.list { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 14px }
+.row + .row { border-top: 1px solid var(--line) }
+.time { font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums }
+.chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 12px; font-size: .92rem; font-weight: 600; white-space: nowrap }
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor }
+.chip.Assigned { background: var(--ok-bg); color: var(--ok-fg) }
+.chip.Pending { background: var(--wait-bg); color: var(--wait-fg) }
+.empty { text-align: center; color: var(--muted); padding: 40px 10px }
+.foot { color: var(--muted); font-size: .85rem; text-align: center; margin-top: 18px; display: flex; flex-direction: column; gap: 8px; align-items: center }
+.foot button { font: inherit; font-size: .9rem; padding: 7px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer }
+.warn { background: var(--wait-bg); color: var(--wait-fg); border-radius: 10px; padding: 9px 12px; font-size: .9rem; margin-bottom: 12px }
+.up { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 16px; display: grid; gap: 10px }
+.up h2 { margin: 0; font-size: 1.05rem }
+.up p, .up ol { margin: 0; font-size: .9rem; color: var(--muted) }
+.up ol { padding-left: 20px }
+.up a { color: var(--brand2) }
+.up input[type=password] { width: 100%; font: inherit; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--fg) }
+.up .btn { font: inherit; font-weight: 600; padding: 11px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; justify-self: start }
+.up .btn.primary { background: var(--brand2); border-color: var(--brand2); color: #fff }
+.up .btn:disabled { opacity: .5; cursor: default }
+.up .msg { font-size: .9rem; color: var(--fg) }
+.up .msg.bad { color: var(--bad) }
+.up .linkbtn { font: inherit; font-size: .85rem; background: none; border: 0; color: var(--brand2); text-decoration: underline; cursor: pointer; padding: 0; justify-self: start }
+.share { display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 10px }
+.filelbl { font-size: .9rem; color: var(--muted); display: grid; gap: 4px }
+.et { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line) }
+.et input { width: 100%; min-width: 0; font: inherit; font-size: .95rem; padding: 8px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg) }
+.et .del { font: inherit; font-size: 1.2rem; line-height: 1; width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer }
+.seg { grid-column: 1 / -1; display: flex; gap: 6px }
+.seg button { flex: 1; font: inherit; font-size: .92rem; font-weight: 600; padding: 8px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer }
+.seg button.on.Pending { background: var(--wait-bg); color: var(--wait-fg); border-color: transparent }
+.seg button.on.Assigned { background: var(--ok-bg); color: var(--ok-fg); border-color: transparent }
+.edempty { color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); padding-top: 10px }
+button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <h1>Trip Status</h1>
+  <div class="sum" id="sum"></div>
+</div></header>
+<main class="wrap">
+  <section class="up" id="upload" hidden>
+    <h2>Edit trips for everyone</h2>
+    <div id="keyBox" hidden>
+      <p>Connect this device once. The key is saved on this device only.</p>
+      <ol>
+        <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub's new token page</a>.</li>
+        <li>Name it "Trip Status" and pick an expiration (up to a year).</li>
+        <li>Repository access: "Only select repositories", pick <b>trip-status</b>.</li>
+        <li>Permissions: set <b>Contents</b> to "Read and write". Tap Generate and paste the key here.</li>
+      </ol>
+      <input type="password" id="token" autocomplete="off" placeholder="github_pat_…" aria-label="GitHub key">
+      <button class="btn" id="saveToken">Connect</button>
+    </div>
+    <div id="fileBox" hidden style="display:grid;gap:10px">
+      <p>Change trips below, or load the Trip Status file from Helper to replace the whole list. Nothing changes for anyone until you tap Save.</p>
+      <label class="filelbl">Load Helper file <input type="file" id="file" accept=".json,application/json"></label>
+      <div id="edTrips"></div>
+      <button class="btn" id="add">+ Add trip</button>
+      <button class="btn primary" id="publish" disabled>Save</button>
+      <div id="shareBox" class="share">
+        <p>Editing link: anyone you give it to can edit and Save. Keep it private.</p>
+        <button class="btn" id="copyLink">Copy editing link</button>
+      </div>
+      <button class="linkbtn" id="forget">Disconnect this device</button>
+    </div>
+    <div class="msg" id="upMsg"></div>
+  </section>
+  <div class="warn" id="warn" hidden></div>
+  <div class="filters" role="group" aria-label="Show">
+    <button id="f-all" aria-pressed="true">All trips</button>
+    <button id="f-pending" aria-pressed="false">Pending only</button>
+  </div>
+  <div id="days"><p class="empty">Loading trips…</p></div>
+  <div class="foot">
+    <span id="updated"></span>
+    <button id="refresh">Refresh</button>
+  </div>
+</main>
+<script>
+var data = null, onlyPending = false;
+try { onlyPending = localStorage.getItem('trips-filter') === 'pending'; } catch (e) {}
+
+function todayStr() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function addDays(s, n) { var p = s.split('-'); var d = new Date(+p[0], p[1] - 1, +p[2] + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function dayLabel(s) { var p = s.split('-'); return new Date(+p[0], p[1] - 1, +p[2]).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }); }
+function timeLabel(t) { if (!t) return 'Time TBD'; var p = t.split(':'), h = +p[0], m = p[1]; return (h % 12 || 12) + ':' + m + ' ' + (h < 12 ? 'AM' : 'PM'); }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+function render() {
+  var today = todayStr(), tomorrow = addDays(today, 1);
+  var trips = ((data && data.trips) || []).filter(function (t) { return t.date >= today; })
+    .sort(function (a, b) { return (a.date + (a.time || '99')).localeCompare(b.date + (b.time || '99')); });
+  var pend = trips.filter(function (t) { return t.status !== 'Assigned'; }).length;
+  document.getElementById('sum').innerHTML = '<span><b>' + pend + '</b> Pending</span><span><b>' + (trips.length - pend) + '</b> Assigned</span>';
+  document.getElementById('f-all').setAttribute('aria-pressed', !onlyPending);
+  document.getElementById('f-pending').setAttribute('aria-pressed', onlyPending);
+  var shown = onlyPending ? trips.filter(function (t) { return t.status !== 'Assigned'; }) : trips;
+  var html = '', last = null;
+  shown.forEach(function (t) {
+    if (t.date !== last) {
+      if (last) html += '</div></section>';
+      var tag = t.date === today ? '<em>Today</em>' : t.date === tomorrow ? '<em>Tomorrow</em>' : '';
+      html += '<section class="day"><h2>' + tag + esc(dayLabel(t.date)) + '</h2><div class="list">';
+      last = t.date;
+    }
+    var st = t.status === 'Assigned' ? 'Assigned' : 'Pending';
+    html += '<div class="row"><span class="time">' + esc(timeLabel(t.time)) + '</span><span class="chip ' + st + '">' + (st === 'Assigned' ? 'Driver assigned' : 'Pending') + '</span></div>';
+  });
+  if (last) html += '</div></section>';
+  if (!html) html = '<p class="empty">' + (data ? (onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') : 'Loading trips…') + '</p>';
+  document.getElementById('days').innerHTML = html;
+  if (data && (data.updated || data.exported)) {
+    var u = new Date(data.updated || data.exported);
+    document.getElementById('updated').textContent = 'Last updated ' + u.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' + u.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+}
+
+function load() {
+  if (window.TRIPS_PREVIEW) { data = window.TRIPS_PREVIEW; render(); return; }
+  if (typeof dirty !== 'undefined' && dirty) return;
+  if (window.pubAt && Date.now() - window.pubAt < 180000) return; // the site takes a minute or two to show what was just published
+  fetch('trips.json?t=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then(function (j) {
+      data = j; document.getElementById('warn').hidden = true; if (typeof syncEd === 'function') syncEd();
+      try { localStorage.setItem('trips-last', JSON.stringify(j)); } catch (e) {}
+      render();
+    })
+    .catch(function () {
+      var w = document.getElementById('warn');
+      try { var c = localStorage.getItem('trips-last'); if (c && !data) data = JSON.parse(c); } catch (e) {}
+      w.textContent = data ? 'No connection. Showing the last list this phone saw.' : 'Could not load trips. Check your connection and tap Refresh.';
+      w.hidden = false; render();
+    });
+}
+
+document.getElementById('f-all').onclick = function () { onlyPending = false; try { localStorage.setItem('trips-filter', 'all'); } catch (e) {} render(); };
+document.getElementById('f-pending').onclick = function () { onlyPending = true; try { localStorage.setItem('trips-filter', 'pending'); } catch (e) {} render(); };
+document.getElementById('refresh').onclick = load;
+document.addEventListener('visibilitychange', function () { if (!document.hidden) load(); });
+setInterval(function () { if (!document.hidden) load(); }, 120000);
+// Hidden editing screen. Everyone else only sees the list. Open the page with #edit=KEY (the editing link, which
+// carries the GitHub key so anyone holding it can save) or with #edit on a device where the key was pasted once.
+// Trips are typed in by hand or loaded from a Helper file, and only date, time and status are ever kept.
+var REPO_API = 'https://api.github.com/repos/jbrantner/trip-status/contents/trips.json';
+var ghToken = '', savedToken = '', linkToken = '';
+try { savedToken = localStorage.getItem('trip-status-key') || ''; } catch (e) {}
+function upMsg(t, bad) { var m = document.getElementById('upMsg'); m.textContent = t; m.className = 'msg' + (bad ? ' bad' : ''); }
+function showUpload() {
+  var m = location.hash.match(/^#(edit|upload)(?:=(.+))?$/);
+  document.getElementById('upload').hidden = !m;
+  if (!m) return;
+  linkToken = m[2] ? decodeURIComponent(m[2]) : '';
+  ghToken = linkToken || savedToken;
+  document.getElementById('forget').hidden = !!linkToken;
+  document.getElementById('keyBox').hidden = !!ghToken;
+  document.getElementById('fileBox').hidden = !ghToken;
+  syncEd();
+}
+function cleanTrips(j) {
+  if (!j || j.app !== 'trip-status' || !Array.isArray(j.trips)) throw new Error('This is not a Trip Status file from Helper.');
+  if (j.trips.length > 300) throw new Error('The file has too many trips.');
+  return j.trips.map(function (t, i) {
+    var keys = Object.keys(t || {});
+    if (keys.some(function (k) { return ['date', 'time', 'status'].indexOf(k) < 0; }))
+      throw new Error('Trip ' + (i + 1) + ' has extra information in it. Only date, time and status are allowed, so nothing was loaded.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(t.date || '')) throw new Error('Trip ' + (i + 1) + ' has no proper date.');
+    if (t.time && !/^\d{2}:\d{2}$/.test(t.time)) throw new Error('Trip ' + (i + 1) + ' has a time in the wrong form.');
+    if (t.status !== 'Pending' && t.status !== 'Assigned') throw new Error('Trip ' + (i + 1) + ' needs a status of Pending or Assigned.');
+    return { date: t.date, time: t.time || '', status: t.status };
+  });
+}
+// The editing list. It starts as the published list; any change, or a loaded Helper file, shows right away in
+// the list underneath as a preview, and nothing is saved until Save.
+var ed = [], dirty = false;
+function sortEd() { ed.sort(function (a, b) { return (a.date + (a.time || '99')).localeCompare(b.date + (b.time || '99')); }); }
+function syncEd() {
+  if (dirty || document.getElementById('upload').hidden) return;
+  var today = todayStr();
+  ed = ((data && data.trips) || []).filter(function (t) { return t.date >= today; }).map(function (t) { return { date: t.date, time: t.time || '', status: t.status === 'Assigned' ? 'Assigned' : 'Pending' }; });
+  sortEd(); drawEd();
+}
+function drawEd() {
+  var box = document.getElementById('edTrips');
+  if (!ed.length) { box.innerHTML = '<p class="edempty">No upcoming trips. Tap Add trip or load a Helper file.</p>'; return; }
+  box.innerHTML = ed.map(function (t, i) {
+    return '<div class="et" data-i="' + i + '">' +
+      '<input type="date" id="ed-d' + i + '" aria-label="Date" value="' + esc(t.date) + '">' +
+      '<input type="time" id="ed-t' + i + '" aria-label="Time" value="' + esc(t.time) + '">' +
+      '<button class="del" aria-label="Remove trip">×</button>' +
+      '<div class="seg"><button class="Pending' + (t.status !== 'Assigned' ? ' on' : '') + '">Pending</button>' +
+      '<button class="Assigned' + (t.status === 'Assigned' ? ' on' : '') + '">Assigned</button></div></div>';
+  }).join('');
+}
+function changed(note) {
+  dirty = true; data = { updated: new Date().toISOString(), trips: ed.slice() }; render();
+  document.getElementById('publish').disabled = false;
+  upMsg(note || 'Not saved yet. The list below shows what everyone will see.');
+}
+document.getElementById('edTrips').addEventListener('change', function (e) {
+  var row = e.target.closest('.et'); if (!row) return;
+  var t = ed[+row.dataset.i];
+  if (e.target.type === 'date') t.date = e.target.value;
+  if (e.target.type === 'time') t.time = e.target.value;
+  changed();
+});
+document.getElementById('edTrips').addEventListener('click', function (e) {
+  var row = e.target.closest('.et'); if (!row) return;
+  var i = +row.dataset.i;
+  if (e.target.classList.contains('del')) { ed.splice(i, 1); drawEd(); changed(); return; }
+  if (e.target.closest('.seg') && e.target.tagName === 'BUTTON') {
+    ed[i].status = e.target.classList.contains('Assigned') ? 'Assigned' : 'Pending'; drawEd(); changed();
+  }
+});
+document.getElementById('add').onclick = function () {
+  var last = ed[ed.length - 1];
+  ed.push({ date: last ? last.date : todayStr(), time: '', status: 'Pending' });
+  drawEd(); changed();
+  var el = document.getElementById('ed-t' + (ed.length - 1)); if (el) el.focus();
+};
+document.getElementById('file').onchange = function (e) {
+  var f = e.target.files[0]; if (!f) return;
+  if (f.size > 100000) { upMsg('That file is too big to be a Trip Status file.', true); return; }
+  f.text().then(function (txt) {
+    var today = todayStr();
+    ed = cleanTrips(JSON.parse(txt)).filter(function (t) { return t.date >= today; });
+    sortEd(); drawEd();
+    changed('Loaded ' + ed.length + ' upcoming trip' + (ed.length === 1 ? '' : 's') + ' from Helper. Check the list, then tap Save.');
+  }).catch(function (err) { upMsg(err instanceof SyntaxError ? 'That file could not be read. Export it from Helper again.' : err.message, true); })
+    .then(function () { e.target.value = ''; });
+};
+document.getElementById('publish').onclick = function () {
+  if (ed.some(function (t) { return !/^\d{4}-\d{2}-\d{2}$/.test(t.date || ''); })) { upMsg('Every trip needs a date.', true); return; }
+  var btn = this; btn.disabled = true; upMsg("Saving…");
+  var h = { 'Authorization': 'Bearer ' + ghToken, 'Accept': 'application/vnd.github+json' };
+  fetch(REPO_API + '?t=' + Date.now(), { headers: h, cache: 'no-store' }).then(function (r) {
+    if (r.status === 401 || r.status === 403) throw new Error('key');
+    return r.ok ? r.json() : null;
+  }).then(function (cur) {
+    var today = todayStr(); sortEd();
+    var body = { updated: new Date().toISOString(), trips: ed.filter(function (t) { return t.date >= today; }).map(function (t) { return { date: t.date, time: t.time || '', status: t.status }; }) };
+    var payload = { message: 'Trips: update status', content: btoa(unescape(encodeURIComponent(JSON.stringify(body, null, 1) + '\n'))) };
+    if (cur && cur.sha) payload.sha = cur.sha;
+    return fetch(REPO_API, { method: 'PUT', headers: h, body: JSON.stringify(payload) }).then(function (r) { r.body2 = body; return r; });
+  }).then(function (r) {
+    if (r.status === 401 || r.status === 403) throw new Error('key');
+    if (!r.ok) throw new Error('http');
+    dirty = false; window.pubAt = Date.now(); data = r.body2; render(); drawEd();
+    try { localStorage.setItem('trips-last', JSON.stringify(data)); } catch (e) {}
+    upMsg('Saved. Everyone sees it within a minute or two, next time they open the app.');
+  }).catch(function (err) {
+    btn.disabled = false;
+    upMsg(err.message === 'key' ? 'GitHub did not accept the key. It may have expired or been deleted; ask Jordan for a new editing link.' : 'Could not save. Check the connection and try again.', true);
+  });
+};
+window.addEventListener('beforeunload', function (e) { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+document.getElementById('saveToken').onclick = function () {
+  var v = document.getElementById('token').value.trim(); if (!v) { upMsg('Paste the key first.', true); return; }
+  savedToken = v; try { localStorage.setItem('trip-status-key', v); } catch (e) {}
+  document.getElementById('token').value = ''; upMsg(''); showUpload();
+};
+document.getElementById('forget').onclick = function () { savedToken = ''; try { localStorage.removeItem('trip-status-key'); } catch (e) {} upMsg(''); showUpload(); };
+document.getElementById('copyLink').onclick = function () {
+  var link = location.origin + location.pathname + '#edit=' + encodeURIComponent(ghToken);
+  var done = function () { upMsg('Editing link copied. Send it only to people who should be able to edit.'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done, function () { window.prompt('Copy this link:', link); });
+  else window.prompt('Copy this link:', link);
+};
+window.addEventListener('hashchange', showUpload);
+showUpload();
+
+render(); load();
+if ('serviceWorker' in navigator && !window.TRIPS_PREVIEW) navigator.serviceWorker.register('sw.js').catch(function () {});
+</script>
+</body>
+</html>
