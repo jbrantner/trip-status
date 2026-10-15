@@ -85,6 +85,8 @@ main { padding-block: 14px 40px }
 .who::-webkit-scrollbar { display: none }
 .who button, .pchip { flex: none; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: .92rem; font-weight: 600; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; white-space: nowrap }
 .who button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff }
+.take { justify-self: start; align-self: start; margin-top: 6px; font: inherit; font-size: .85rem; font-weight: 600; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--brand2); background: transparent; color: var(--brand2); cursor: pointer }
+.asked { margin-top: 6px; font-size: .85rem; color: var(--muted); font-style: italic }
 .who .lead { flex: none; align-self: center; font-size: .8rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700 }
 .icon { font-size: 1.05rem; line-height: 1 }
 .people { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px }
@@ -173,6 +175,7 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
   <div class="filters" role="group" aria-label="Show">
     <button id="f-all" aria-pressed="true">All trips</button>
     <button id="f-pending" aria-pressed="false">Pending only</button>
+    <button id="f-mine" aria-pressed="false" hidden>My trips</button>
   </div>
   <div id="days"><p class="empty">Loading trips…</p></div>
   <div class="foot">
@@ -181,7 +184,7 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
   </div>
 </main>
 <script>
-var data = null, onlyPending = false, lastChecked = null, me = '';
+var data = null, onlyPending = false, onlyMine = false, lastChecked = null, me = '';
 var ICONS = ['🌸', '🌻', '🌵', '🍀', '🍁', '🌙', '⭐', '🔥', '🐝', '🦋', '🐢', '🐬', '🦉', '🍎', '🍋', '🎈', '⚓', '🎵'];
 try { me = localStorage.getItem('trip-status-me') || ''; } catch (e) {}
 function profiles() { return (data && Array.isArray(data.profiles)) ? data.profiles : []; }
@@ -194,7 +197,7 @@ function nameInitials(first, last) {
   return a && b ? a + '.' + b + '.' : '';
 }
 function pLabel(p) { return '<span class="icon">' + esc(p.icon) + '</span>' + esc(p.initials); }
-try { onlyPending = localStorage.getItem('trips-filter') === 'pending'; } catch (e) {}
+try { var f0 = localStorage.getItem('trips-filter'); onlyPending = f0 === 'pending'; onlyMine = f0 === 'mine'; } catch (e) {}
 
 function todayStr() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function addDays(s, n) { var p = s.split('-'); var d = new Date(+p[0], p[1] - 1, +p[2] + n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -202,6 +205,13 @@ function dayLabel(s) { var p = s.split('-'); return new Date(+p[0], p[1] - 1, +p
 function timeLabel(t) { if (!t) return 'Time TBD'; var p = t.split(':'), h = +p[0], m = p[1]; return (h % 12 || 12) + ':' + m + ' ' + (h < 12 ? 'AM' : 'PM'); }
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
+function askedKey(t) { return me + '|' + t.date + '|' + (t.time || 'TBD'); }
+function askedList() { try { return JSON.parse(localStorage.getItem('trip-status-asked') || '[]'); } catch (e) { return []; } }
+function takeHtml(t) {
+  if (!me || t.status === 'Assigned' || (t.who || []).indexOf(me) >= 0) return '';
+  if (askedList().indexOf(askedKey(t)) >= 0) return '<span class="asked">Asked to take this trip</span>';
+  return '<button class="take" data-d="' + esc(t.date) + '" data-t="' + esc(t.time || '') + '">Take this trip</button>';
+}
 function render() {
   var today = todayStr(), tomorrow = addDays(today, 1);
   var all = ((data && data.trips) || []).filter(function (t) { return t.date >= today; })
@@ -213,12 +223,15 @@ function render() {
   who.innerHTML = (ps.length ? '<span class="lead">View as</span><button data-p="" aria-pressed="' + !me + '">Everyone</button>' +
     ps.map(function (p) { return '<button data-p="' + esc(p.id) + '" aria-pressed="' + (p.id === me) + '">' + pLabel(p) + '</button>'; }).join('') : '') +
     '<button data-make="1">+ Make my profile</button>';
-  var trips = me ? all.filter(function (t) { return (t.who || []).indexOf(me) >= 0; }) : all;
+  if (!me) onlyMine = false;
+  var trips = onlyMine ? all.filter(function (t) { return (t.who || []).indexOf(me) >= 0; }) : all;
+  document.getElementById('f-mine').hidden = !me;
+  document.getElementById('f-mine').setAttribute('aria-pressed', onlyMine);
   var pend = trips.filter(function (t) { return t.status !== 'Assigned'; }).length;
   document.getElementById('sum').innerHTML = '<span><b>' + pend + '</b> Pending</span><span><b>' + (trips.length - pend) + '</b> Assigned</span>';
-  document.getElementById('f-all').setAttribute('aria-pressed', !onlyPending);
-  document.getElementById('f-pending').setAttribute('aria-pressed', onlyPending);
-  var shown = onlyPending ? trips.filter(function (t) { return t.status !== 'Assigned'; }) : trips;
+  document.getElementById('f-all').setAttribute('aria-pressed', !onlyPending && !onlyMine);
+  document.getElementById('f-pending').setAttribute('aria-pressed', onlyPending && !onlyMine);
+  var shown = onlyPending && !onlyMine ? trips.filter(function (t) { return t.status !== 'Assigned'; }) : trips;
   var html = '', last = null;
   shown.forEach(function (t) {
     if (t.date !== last) {
@@ -229,10 +242,10 @@ function render() {
     }
     var st = t.status === 'Assigned' ? 'Assigned' : 'Pending';
     html += '<div class="row"><span class="when"><span class="time">' + esc(timeLabel(t.time)) + '</span>' + (t.label ? '<span class="label">' + esc(t.label) + '</span>' : '') +
-      ((t.who || []).length ? '<span class="people">' + t.who.map(function (id) { var p = profileById(id); return p ? '<span' + (id === me ? ' class="me"' : '') + '>' + esc(p.icon) + ' ' + esc(p.initials) + '</span>' : ''; }).join('') + '</span>' : '') + '</span><span class="chip ' + st + '">' + (st === 'Assigned' ? 'Driver assigned' : 'Pending') + '</span></div>';
+      ((t.who || []).length ? '<span class="people">' + t.who.map(function (id) { var p = profileById(id); return p ? '<span' + (id === me ? ' class="me"' : '') + '>' + esc(p.icon) + ' ' + esc(p.initials) + '</span>' : ''; }).join('') + '</span>' : '') + takeHtml(t) + '</span><span class="chip ' + st + '">' + (st === 'Assigned' ? 'Driver assigned' : 'Pending') + '</span></div>';
   });
   if (last) html += '</div></section>';
-  if (!html) html = '<p class="empty">' + (!data ? 'Loading trips…' : me ? 'No upcoming trips for ' + esc(meP.initials) + (onlyPending ? ' are pending.' : '.') : onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') + '</p>';
+  if (!html) html = '<p class="empty">' + (!data ? 'Loading trips…' : onlyMine ? 'No upcoming trips for ' + esc(meP.initials) + ' yet. Tap All trips or Pending only to take one.' : onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') + '</p>';
   document.getElementById('days').innerHTML = html;
   if (data && (data.updated || data.exported)) {
     var u = new Date(data.updated || data.exported);
@@ -261,11 +274,24 @@ function load() {
     });
 }
 
+// "Take this trip" sends a request through the same mailbox as profiles; Jordan's Update button applies it.
+document.getElementById('days').addEventListener('click', function (e) {
+  var b = e.target.closest('.take'); if (!b || !me) return;
+  var t = { date: b.dataset.d, time: b.dataset.t };
+  b.disabled = true; b.textContent = 'Sending…';
+  fetch(INBOX, { method: 'POST', body: 'Trip request: ' + me + ' ' + t.date + ' ' + (t.time || 'TBD') })
+    .then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      var a = askedList(); a.push(askedKey(t)); try { localStorage.setItem('trip-status-asked', JSON.stringify(a.slice(-100))); } catch (err) {}
+      render();
+    })
+    .catch(function () { b.disabled = false; b.textContent = 'Could not send. Tap to try again'; });
+});
 document.getElementById('who').addEventListener('click', function (e) {
   var b = e.target.closest('button'); if (!b) return;
   if (b.dataset.make) { var m = document.getElementById('make'); m.hidden = !m.hidden; drawMake(); return; }
   me = b.dataset.p; try { localStorage.setItem('trip-status-me', me); } catch (err) {}
-  render();
+  setFilter(me ? 'mine' : 'all');
 });
 var makeIcon = ICONS[0];
 function drawMake() {
@@ -295,8 +321,10 @@ document.getElementById('mSend').onclick = function () {
     .catch(function () { msg.textContent = 'Could not send. Check your connection and tap Apply again.'; })
     .then(function () { setTimeout(function () { btn.disabled = false; }, 3000); });
 };
-document.getElementById('f-all').onclick = function () { onlyPending = false; try { localStorage.setItem('trips-filter', 'all'); } catch (e) {} render(); };
-document.getElementById('f-pending').onclick = function () { onlyPending = true; try { localStorage.setItem('trips-filter', 'pending'); } catch (e) {} render(); };
+function setFilter(f) { onlyPending = f === 'pending'; onlyMine = f === 'mine'; try { localStorage.setItem('trips-filter', f); } catch (e) {} render(); }
+document.getElementById('f-all').onclick = function () { setFilter('all'); };
+document.getElementById('f-pending').onclick = function () { setFilter('pending'); };
+document.getElementById('f-mine').onclick = function () { setFilter('mine'); };
 document.getElementById('refresh').onclick = function () {
   var b = this; b.textContent = 'Checking…'; b.disabled = true;
   load(); setTimeout(function () { b.textContent = 'Refresh'; b.disabled = false; }, 800);
@@ -331,13 +359,18 @@ function checkRequests() {
     requests = txt.split('\n').map(function (l) { try { return JSON.parse(l); } catch (e) { return null; } })
       .filter(function (m) { return m && m.event === 'message' && done.indexOf(m.id) < 0; })
       .map(function (m) {
-        var x = String(m.message || '').match(/^Profile request: ([A-Z]\.[A-Z]\.) (\S+)$/);
-        return x && ICONS.indexOf(x[2]) >= 0 ? { id: m.id, initials: x[1], icon: x[2] } : null;
+        var msg = String(m.message || ''), x = msg.match(/^Profile request: ([A-Z]\.[A-Z]\.) (\S+)$/);
+        if (x) return ICONS.indexOf(x[2]) >= 0 ? { id: m.id, initials: x[1], icon: x[2] } : null;
+        var y = msg.match(/^Trip request: (p[a-z0-9]+) (\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}|TBD)$/);
+        if (!y) return null;
+        var prof = edP.filter(function (p) { return p.id === y[1]; })[0], time = y[3] === 'TBD' ? '' : y[3];
+        var trip = ed.filter(function (t) { return t.date === y[2] && (t.time || '') === time; })[0];
+        return prof && trip && (trip.who || []).indexOf(prof.id) < 0 ? { id: m.id, trip: true, pid: prof.id, initials: prof.initials, icon: prof.icon, date: y[2], time: time } : null;
       })
       .filter(function (q) {
         if (!q) return false;
-        var key = q.initials + q.icon;
-        if (seen[key] || edP.some(function (p) { return p.initials === q.initials && p.icon === q.icon; })) return false;
+        var key = q.trip ? q.pid + q.date + q.time : q.initials + q.icon;
+        if (seen[key] || (!q.trip && edP.some(function (p) { return p.initials === q.initials && p.icon === q.icon; }))) return false;
         return (seen[key] = true);
       });
     drawRequests();
@@ -346,7 +379,8 @@ function checkRequests() {
 function drawRequests() {
   document.getElementById('reqBox').hidden = !requests.length;
   document.getElementById('reqList').innerHTML = requests.map(function (q) {
-    return '<span class="pchip">' + pLabel(q) + '<button data-r="' + esc(q.id) + '" aria-label="Ignore ' + esc(q.initials) + '">×</button></span>'; }).join('');
+    var what = q.trip ? ' takes ' + esc(dayLabel(q.date).replace(/,.*/, '') + ' ' + timeLabel(q.time)) : ' new profile';
+    return '<span class="pchip">' + pLabel(q) + what + '<button data-r="' + esc(q.id) + '" aria-label="Ignore">×</button></span>'; }).join('');
 }
 document.getElementById('reqList').addEventListener('click', function (e) {
   var b = e.target.closest('button'); if (!b) return;
@@ -354,7 +388,10 @@ document.getElementById('reqList').addEventListener('click', function (e) {
 });
 document.getElementById('reqUpdate').onclick = function () {
   var add = requests.slice(); if (!add.length) return;
-  add.forEach(function (q) { if (!edP.some(function (p) { return p.initials === q.initials && p.icon === q.icon; })) edP.push({ id: 'p' + Date.now().toString(36) + q.id.slice(0, 4), initials: q.initials, icon: q.icon }); });
+  add.filter(function (q) { return q.trip; }).forEach(function (q) {
+    ed.forEach(function (t) { if (t.date === q.date && (t.time || '') === q.time) { t.who = t.who || []; if (t.who.indexOf(q.pid) < 0) t.who.push(q.pid); t.status = 'Assigned'; } });
+  });
+  add.filter(function (q) { return !q.trip; }).forEach(function (q) { if (!edP.some(function (p) { return p.initials === q.initials && p.icon === q.icon; })) edP.push({ id: 'p' + Date.now().toString(36) + q.id.slice(0, 4), initials: q.initials, icon: q.icon }); });
   markHandled(add.map(function (q) { return q.id; })); requests = []; drawRequests();
   drawProfiles(); drawEd(); changed();
   document.getElementById('publish').click();
