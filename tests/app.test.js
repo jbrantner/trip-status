@@ -780,6 +780,29 @@ test('helper: with no connection it says nothing was saved', async (s) => {
   await o.close();
 });
 
+test('helper: a trip Helper used to read as 1:30 AM keeps its requesters when Helper now says 1:30 PM', async (s) => {
+  // Helper before v70 read "1:30" (no AM or PM) as morning; v70 reads it as afternoon.
+  const d = sampleData();
+  d.trips = [
+    { id: 'tearly1', date: '2026-10-20', time: '01:30', status: 'Pending', who: ['pq1zz0001'] },
+    { id: 'tmorn1', date: '2026-10-20', time: '06:30', status: 'Pending' },
+    { id: 'tpm1', date: '2026-10-21', time: '14:00', status: 'Pending', label: 'Group B' },
+    { id: 'tearly2', date: '2026-10-21', time: '02:00', status: 'Pending', who: ['pxy00002'] },
+  ];
+  const o = await open(s, { now: NOW, data: d, storage: withKey(), wait: false, hash: helperHash(helperExport([
+    { date: '2026-10-20', time: '06:30', status: 'Pending' },
+    { date: '2026-10-20', time: '13:30', status: 'Assigned' },
+    { date: '2026-10-21', time: '14:00', status: 'Assigned' },
+  ])) });
+  const j = await waitPut(o.gh);
+  eq(j.trips.map((t) => [t.id, t.date, t.time, t.status, t.label || '', (t.who || []).join()]), [
+    ['tmorn1', '2026-10-20', '06:30', 'Pending', '', ''],
+    ['tearly1', '2026-10-20', '13:30', 'Assigned', '', 'pq1zz0001'],
+    ['tpm1', '2026-10-21', '14:00', 'Assigned', 'Group B', ''],
+  ]);
+  await o.close();
+});
+
 test('helper: 300 trips is fine, 301 is refused', async (s) => {
   const many = (n) => Array.from({ length: n }, (_, i) => ({ date: '2026-11-' + String(1 + (i % 28)).padStart(2, '0'), time: String(6 + (i % 12)).padStart(2, '0') + ':00', status: i % 3 ? 'Assigned' : 'Pending' }));
   const o = await open(s, { now: NOW, hash: helperHash(helperExport(many(300))), storage: withKey(), wait: false });
@@ -793,16 +816,33 @@ test('helper: 300 trips is fine, 301 is refused', async (s) => {
 });
 
 // The real Helper: when HELPER_HTML points at Helper.html, its own Update button builds the link.
-test('helper: round trip from Helper\'s own Update button', async (s) => {
+// Opens Helper.html (read only, no network) at the tests' "today", runs setup() in it to give it made-up trips,
+// presses its Update Trip Status button and returns the link it opens. Null when HELPER_HTML is not set.
+async function helperLink(setup) {
   const file = process.env.HELPER_HTML;
-  if (!file || !fs.existsSync(file)) { console.log('       (skipped: set HELPER_HTML to Helper.html to run it)'); return; }
+  if (!file || !fs.existsSync(file)) { console.log('       (skipped: set HELPER_HTML to Helper.html to run it)'); return null; }
   const b = await H.getBrowser();
   const hctx = await b.newContext({ timezoneId: 'America/New_York' });
   await hctx.route(/^https?:/, (r) => r.abort());
   const hp = await hctx.newPage();
   await hp.clock.install({ time: new Date(NOW) });
   await hp.goto('file://' + path.resolve(file));
+  // Helper starts by restoring its saved files and rebuilding its lists, which would wipe made-up trips put in sooner.
+  // Its version line appears once that is done.
+  await hp.waitForSelector('#privacy .ver', { state: 'attached', timeout: 10000 }).catch(() => { throw new Error('Helper did not finish starting (no version line under #privacy)'); });
+  await hp.evaluate(setup);
   const url = await hp.evaluate(() => {
+    let opened = null; window.open = (u) => { opened = u; return null; };
+    document.getElementById('trUpdate').onclick();
+    return opened;
+  });
+  await hctx.close();
+  assert(url && url.startsWith('https://jbrantner.github.io/trip-status/#helper='), 'Helper opened ' + url);
+  return url;
+}
+
+test('helper: round trip from Helper\'s own Update button', async (s) => {
+  const url = await helperLink(() => {
     /* Made-up trips in Helper's own format: [date, minutes, time text, DRIVER cell, place, back, riders, vehicle, extra] */
     trips = { file: 'made-up.xlsx', list: [
       ['2026-10-18', 600, '10:00 AM', 'Driver A', 'Sample Park', '', '4', '', { s: 600, e: 720, wc: false, wk: false, id: '1' }],
@@ -814,12 +854,8 @@ test('helper: round trip from Helper\'s own Update button', async (s) => {
       ['2026-12-12', 510, '8:30 AM', '', 'Sample Mall', '', '5', '', { s: 510, e: 800, wc: false, wk: false, id: '7' }],
     ] };
     tripTags[tripKey(trips.list[4])] = 'Gardens ☘ "fall"';
-    let opened = null; window.open = (u) => { opened = u; return null; };
-    document.getElementById('trUpdate').onclick();
-    return opened;
   });
-  await hctx.close();
-  assert(url && url.startsWith('https://jbrantner.github.io/trip-status/#helper='), 'Helper opened ' + url);
+  if (!url) return;
   const d = sampleData();
   d.trips = [{ date: '2026-12-12', time: '08:30', status: 'Pending', label: 'Zoo', who: ['pq1zz0001'] }, { date: '2026-12-12', time: '08:30', status: 'Pending', label: 'Mall' }];
   const o = await open(s, { now: NOW, data: d, hash: url.slice(url.indexOf('#')), storage: withKey(), wait: false });
@@ -832,6 +868,46 @@ test('helper: round trip from Helper\'s own Update button', async (s) => {
     ['2026-12-12', '08:30', 'Assigned', 'Zoo', '', 'pq1zz0001'],
     ['2026-12-12', '08:30', 'Pending', 'Mall', '', ''],
   ]);
+  await o.close();
+});
+
+test('helper: Helper\'s own sheet reader, with tricky times, dates and tags, gives an Update the app takes in full', async (s) => {
+  const url = await helperLink(() => {
+    if (typeof readTrips !== 'function') throw new Error('Helper no longer has readTrips(): update this test');
+    // Made-up rows the way the request form's sheet has them; row 3 is hidden by an Excel filter.
+    const grid = [
+      ['ID', 'Departure Date', 'Pick Up Time', 'Departure Time', 'Destination', 'Return Time', 'Passengers', 'Desired Vehicle', 'Driver'],
+      ['1', '10/20/2026', '1:30', '', 'Sample Park', '', '4', '', 'Driver A'],
+      ['2', '10/20/2026', '06:30', '', 'Sample Lake', '', '4', '', '(Driver B)'],
+      ['3', '10/21/2026', '24:30', '', 'Sample Diner', '', '3', '', ''],
+      ['4', '10/22/2026', '10.45am', '', 'Sample Museum', '', '5', '', 'Driver A'],
+      ['5', '10/23/2026', '130pm', 'Leave at 9:45', 'Sample Zoo', '', '5', '', 'Driver C'],
+      ['6', '02/30/2027', '9:00 AM', '', 'Sample Mall', '', '5', '', ''],
+      ['7', '10/24/2026', 'noon', '', 'Sample Garden', '', '5', '', 'Driver A, (Driver B)'],
+      ['8', 'Friday, October 30, 2026', '0.4479', '', 'Sample Farm', '', '5', '', ''],
+      ['9', '11/02/2026', '6:59', '', 'Sample Pond', '', '5', '', ''],
+      ['10', '10/18/2026', '10:00 AM', '', 'Past Trip', '', '5', '', 'Driver A'],
+    ];
+    trips = readTrips([{ name: 'Form1', grid, hiddenRows: new Set([3]), hiddenCols: new Set(), filtered: true }]);
+    trips.file = 'made-up.xlsx';
+    tripTags[tripKey(trips.list[0])] = 'A'.repeat(29) + '🌸'; // longer than 30: Helper cuts it without halving the emoji
+    tripTags[tripKey(trips.list[3])] = '  Museum 👩‍👩‍👧 day  ';
+    tripTags[tripKey(trips.list[4])] = 'Zoo\u0007 bell';
+  });
+  if (!url) return;
+  const sent = JSON.parse(Buffer.from(url.slice(url.indexOf('#helper=') + 8).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+  assert(sent.trips.length >= 6, 'Helper sent ' + sent.trips.length + ' trips');
+  const d = sampleData();
+  d.trips = [{ id: 'tearly1', date: '2026-10-20', time: '01:30', status: 'Pending', who: ['pq1zz0001'] }]; // "1:30" as Helper before v70 sent it
+  const o = await open(s, { now: NOW, data: d, hash: url.slice(url.indexOf('#')), storage: withKey(), wait: false });
+  const j = await waitPut(o.gh);
+  // Every trip Helper sent was taken in as sent (one bad field would have refused the whole Update); tags are only tidied.
+  const tidy = (v) => (v || '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const rows = (list) => list.map((t) => JSON.stringify([t.date, t.time, t.status, tidy(t.label), (t.drivers || []).join('+')])).sort();
+  eq(rows(j.trips), rows(sent.trips));
+  // If Helper reads "1:30" as 1:30 PM, the trip it used to send as 01:30 keeps its id and requester.
+  const pm = j.trips.filter((t) => t.date === '2026-10-20' && t.time === '13:30')[0];
+  if (pm) eq([pm.id, (pm.who || []).join()], ['tearly1', 'pq1zz0001']);
   await o.close();
 });
 

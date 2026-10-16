@@ -960,6 +960,12 @@ function matchHelper(incoming, pool) {
     if (cands.length === 1 && rivals.length === 1) take(n, cands[0]);
   });
   incoming.forEach((t, n) => { if (match[n]) return; const o = pool.filter((x) => !used[x.id] && x.date === t.date && x.time === t.time)[0]; if (o) take(n, o); });
+  // Helper before v70 read a time like "1:30" (1 to 6 o'clock, no AM or PM) as morning, and v70 reads it as afternoon.
+  // So a trip Helper now sends 12 hours later than the list has it is the same trip, and keeps its requesters.
+  incoming.forEach((t, n) => {
+    const h = +t.time.slice(0, 2); if (match[n] || h < 13 || h > 18) return;
+    const am = '0' + (h - 12) + t.time.slice(2), o = pool.filter((x) => !used[x.id] && x.date === t.date && x.time === am)[0]; if (o) take(n, o);
+  });
   return incoming.map((t, n) => {
     const o = match[n];
     return { id: o ? o.id : newId('t'), date: t.date, time: t.time, status: t.status, drivers: slots(t).slice(), label: t.label || (o && o.label) || '', who: o ? (o.who || []).slice() : [] };
