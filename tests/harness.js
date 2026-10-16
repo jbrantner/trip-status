@@ -57,7 +57,7 @@ class FakeGitHub {
     this.setRepo(initial);
     this.pages = this.file;
     this.autoPublish = opts.autoPublish !== false;
-    this.puts = []; this.gets = 0; this.repoChecks = 0;
+    this.puts = []; this.gets = 0; this.repoChecks = 0; this.pagesGets = 0;
     this.putQueue = []; // forced replies for the next PUTs, e.g. [{ status: 409 }]
     this.pagesDelay = 0; this.pagesFail = false; this.apiFail = false;
     this.pagesQueue = []; // per-request overrides for trips.json: { delay, body, status }
@@ -69,6 +69,7 @@ class FakeGitHub {
   lastPut() { return this.puts[this.puts.length - 1]; }
   async attach(ctx) {
     await ctx.route('**/trips.json*', async (route) => {
+      this.pagesGets++;
       const o = this.pagesQueue.shift() || {};
       const delay = o.delay != null ? o.delay : this.pagesDelay;
       if (delay) await new Promise((r) => setTimeout(r, delay));
@@ -137,7 +138,7 @@ async function closeBrowser() { if (browser) await browser.close(); browser = nu
 const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
 
 // Opens the app. opts: data (trips.json), storage (localStorage before load), hash, now (fixed clock), size,
-// serviceWorkers ('block' by default), gh/ntfy options, path (extra path/query after /trip-status/).
+// serviceWorkers ('block' by default), gh/ntfy options, path (extra path/query after /trip-status/), init (script).
 async function open(server, opts = {}) {
   const b = await getBrowser();
   const ctx = await b.newContext(Object.assign({}, PHONE, opts.size ? { viewport: opts.size } : {}, {
@@ -151,6 +152,7 @@ async function open(server, opts = {}) {
   await gh.attach(ctx); await ntfy.attach(ctx);
   // Tabs that close themselves after saving only pretend to here, so the test can still look at them.
   await ctx.addInitScript(() => { window.close = () => { window.__closed = true; }; });
+  if (opts.init) await ctx.addInitScript(opts.init); // a script that runs before the page's own, e.g. a preview's made-up trips
   if (opts.storage) {
     await ctx.addInitScript((s) => { if (!sessionStorage.getItem('__seeded')) { sessionStorage.setItem('__seeded', '1'); for (const k in s) localStorage.setItem(k, s[k]); } }, opts.storage);
   }

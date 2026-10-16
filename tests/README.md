@@ -22,7 +22,7 @@ NODE_PATH=$(npm root -g) node tests/app.test.js helper    # only tests with "hel
 What they cover: the list (days, times, tags, driver spots, damaged or late data), profiles and Follow, the editing
 screen (saving, merging with changes made elsewhere, retries, Undo, the key), Helper's Update link (what it may carry,
 same-time trips, tags, older and newer Updates, no connection), the offline copy (`sw.js`), and accessibility (names,
-contrast, 44 px targets, 320 px wide with text at 200%, announcements, focus, Windows high contrast).
+contrast, 48 px targets, 320 px wide with text at 200%, announcements, focus, Windows high contrast).
 
 ## The GitHub job (`test_apply_requests.py`)
 

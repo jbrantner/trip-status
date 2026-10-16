@@ -278,6 +278,7 @@ const REPO_API = REPO + '/contents/trips.json';
 // Helper's Update may only carry these keys on a trip. Anything else (a name, a place) refuses the whole update.
 const HELPER_KEYS = ['date', 'time', 'status', 'label', 'drivers'];
 const MAX_TRIPS = 300, MAX_LABEL = 30, MAX_SPOTS = 6;
+// A preview page can set window.TRIPS_PREVIEW to made-up trips: then nothing is read from or sent to GitHub or ntfy.
 const PREVIEW = window.TRIPS_PREVIEW || null;
 const $ = (id) => document.getElementById(id);
 
@@ -387,7 +388,7 @@ let data = null;            // the published list, cleaned
 let lastText = '';          // trips.json exactly as last read, so an unchanged list is not redrawn
 let loadFailed = false, cacheWhy = '';
 let me = getItem('trip-status-me') || '';
-let filter = getItem('trips-filter') || 'all';
+let filter = 'all';         // which trips show; the viewing and editing screens each remember their own
 let fl = readFollows();     // trips followed on this phone
 let makeIcon = ICONS[0], pickIcon = ICONS[0];
 
@@ -571,7 +572,10 @@ function drawIcons(box, chosen) {
 // ------------------------------------------------------------------ reading the list
 let loadSeq = 0, applied = 0, savedStamp = '', savedAt = 0, checkedAt = null;
 function load() {
-  if (PREVIEW) { data = data || cleanData(PREVIEW); checkedAt = new Date(); render(true); return Promise.resolve(); }
+  if (PREVIEW) {
+    if (!data) { data = cleanData(PREVIEW); settleMine(); settleFollows(); syncEd(); }
+    checkedAt = new Date(); render(true); return Promise.resolve();
+  }
   const seq = ++loadSeq;
   let ctl = null, timer = 0;
   try { ctl = new AbortController(); timer = setTimeout(() => ctl.abort(), 20000); } catch (e) { ctl = null; }
@@ -671,7 +675,7 @@ $('mSend').addEventListener('click', () => {
   announce('You are ' + v + '. My trips shows the trips you follow.');
 });
 function setFilter(f, tell) {
-  filter = f; setItem('trips-filter', f); render();
+  filter = f; setItem(filterKey(), f); render();
   if (!tell) return;
   const n = $('days').querySelectorAll('.row').length;
   announce((filter === 'mine' ? 'My trips' : filter === 'pending' ? 'Pending only' : 'All trips') + ': ' + (n ? n + ' trip' + (n === 1 ? '' : 's') : 'none') + '.');
@@ -702,7 +706,7 @@ setInterval(() => { if (!document.hidden) load(); }, 120000);
 // Hidden from everyone else. Open the page with #edit=KEY (the editing link, which carries the GitHub key so anyone
 // holding it can save) or with #edit on a device where the key was entered once. The key is kept on this device and
 // taken out of the address bar right away.
-let key = getItem('trip-status-key') || '';
+let key = PREVIEW ? 'preview' : getItem('trip-status-key') || '';
 let editingOn = false, needKey = false;
 let ed = null, edP = null, base = null; // the editing copy, its profiles, and the published list it started from
 let dirty = false, openI = -1, removed = null, saving = false, editVersion = 0;
@@ -711,9 +715,11 @@ function editing() { return editingOn && !!key && Array.isArray(ed); }
 // readers say them at once; everything else goes on a polite status line.
 function setMsg(box, t, bad) { $(box + 'Ok').textContent = bad ? '' : t; $(box + 'Bad').textContent = bad ? t : ''; }
 function say(t, bad) { setMsg(editing() ? 'up' : 'key', t, bad); }
+const filterKey = () => (editingOn ? 'trips-filter-edit' : 'trips-filter');
 function showUpload() {
   const m = location.hash.match(/^#(edit|upload)(?:=(.+))?$/);
   editingOn = !!m;
+  filter = getItem(filterKey()) || 'all';
   $('upload').hidden = !m;
   if (m && m[2]) {
     let k = m[2]; try { k = decodeURIComponent(k); } catch (e) { /* keep as typed */ }
@@ -722,6 +728,7 @@ function showUpload() {
   }
   $('keyBox').hidden = !editingOn || (!!key && !needKey);
   $('fileBox').hidden = !editingOn || !key;
+  $('shareBox').hidden = !!PREVIEW;
   syncEd(); render();
 }
 // Copies the published list into the editing list, unless there are changes not saved yet or a trip is open.
@@ -834,7 +841,7 @@ $('undo').addEventListener('click', () => {
 $('add').addEventListener('click', () => {
   const today = todayStr(), lastT = sortTrips(ed)[ed.length - 1];
   ed.push({ id: newId('t'), date: lastT && lastT.date >= today ? lastT.date : today, time: '', status: 'Pending', drivers: ['Pending'], label: '', who: [] });
-  openI = ed.length - 1; filter = 'all'; setItem('trips-filter', 'all');
+  openI = ed.length - 1; filter = 'all'; setItem(filterKey(), 'all');
   changed();
   const o = document.querySelector('.row.open');
   if (o) { o.scrollIntoView({ block: 'center' }); o.querySelector('input').focus({ preventScroll: true }); }
@@ -1056,9 +1063,9 @@ function save() {
   if (openI >= 0) { openI = -1; render(); }
   saving = true; $('publish').disabled = true; say('Saving…');
   const v0 = editVersion;
-  const attempt = (n) => ghGet().then((cur) => {
+  const attempt = (n) => (PREVIEW ? Promise.resolve(null) : ghGet()).then((cur) => {
     const out = buildSave(cur && cur.json);
-    if (out.stale) return out;
+    if (out.stale || PREVIEW) return out;
     const payload = { message: 'Trips: update status', content: toB64(JSON.stringify(out.body, null, 1) + '\n') };
     if (cur && cur.sha) payload.sha = cur.sha;
     return fetch(REPO_API, { method: 'PUT', headers: ghHeaders(), body: JSON.stringify(payload) }).then((r) => {
@@ -1075,7 +1082,7 @@ function save() {
     removed = null; base = withIds(data);
     if (editVersion === v0) { dirty = false; syncEd(); } else $('publish').disabled = false;
     settleFollows(); render();
-    say(out.stale ? 'Nothing to save: a newer update from Helper was already saved.'
+    say(PREVIEW ? 'Saved in this preview only. Nothing was sent.' : out.stale ? 'Nothing to save: a newer update from Helper was already saved.'
       : out.others ? 'Saved. Changes made elsewhere while you were editing were kept too.' : 'Saved. Everyone sees it within a minute or two.');
     // Opened by Helper's Update button: close this tab once saved. Browsers only allow it for tabs a page opened.
     if (fromHelper) {

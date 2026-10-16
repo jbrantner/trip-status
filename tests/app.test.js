@@ -537,6 +537,20 @@ test('editor: counts at the top, and Pending only shows just the trips without a
   await o.close();
 });
 
+test('editor: the viewing and editing screens each remember their own filter', async (s) => {
+  // Someone who uses My trips on the viewing screen still sees every trip when the editing screen opens.
+  const o = await openEditor(s, { storage: { 'trip-status-me': 'pq1zz0001', 'trips-filter': 'mine' } });
+  eq(await o.page.getAttribute('#f-all', 'aria-pressed'), 'true');
+  eq((await o.page.$$('.row')).length, 7);
+  await o.page.click('#f-pending');
+  await o.page.evaluate(() => { location.hash = '#view'; });
+  await o.page.waitForFunction(() => document.getElementById('f-mine').getAttribute('aria-pressed') === 'true');
+  await o.page.evaluate(() => { location.hash = '#edit'; });
+  await o.page.waitForFunction(() => document.getElementById('f-pending').getAttribute('aria-pressed') === 'true');
+  eq((await o.page.$$('.row')).length, 3);
+  await o.close();
+});
+
 test('editor: the first tap after typing is not lost', async (s) => {
   const o = await openEditor(s);
   const f = await editTrip(o.page, '1:30 PM');
@@ -821,6 +835,24 @@ test('helper: round trip from Helper\'s own Update button', async (s) => {
   await o.close();
 });
 
+// ---------------------------------------------------------------- preview page
+test('preview: with made-up trips it never contacts GitHub or ntfy, and Save stays on the page', async (s) => {
+  const d = sampleData(); d.trips.forEach((t, i) => { t.id = 't' + (1000 + i); });
+  const o = await open(s, { now: NOW, hash: '#edit', init: 'window.TRIPS_PREVIEW = ' + JSON.stringify(d) });
+  eq(flat(await listed(o.page)).length, 7, 'made-up trips show');
+  const f = await editTrip(o.page, '1:30 PM');
+  await f.locator('.seg button', { hasText: 'Assigned' }).click();
+  await o.page.locator('.row.open .done').click();
+  await o.page.click('#publish');
+  await o.page.waitForFunction(() => /preview only/.test(document.getElementById('upOk').textContent));
+  assert(flat(await listed(o.page)).find((x) => x.time === '1:30 PM').status === 'Assigned', 'the change shows');
+  await o.page.click('#meBtn'); await o.page.click('#who [data-make]');
+  await o.page.fill('#mFirst', 'Sample'); await o.page.fill('#mLast', 'Person'); await o.page.click('#mSend');
+  eq([o.gh.pagesGets, o.gh.gets, o.gh.puts.length, o.gh.repoChecks, o.ntfy.posted.length], [0, 0, 0, 0, 0], 'requests to trips.json, GitHub and ntfy');
+  assert(await o.page.isHidden('#shareBox'), 'no editing link to copy in a preview');
+  await o.close();
+});
+
 // ---------------------------------------------------------------- offline copy (sw.js)
 // Here the page's requests go through sw.js to a real local server (Playwright's stand-ins can't see them), so the
 // site is served from a temporary copy with made-up trips.
@@ -885,7 +917,7 @@ async function a11yIssues(page) {
       const name = (e.getAttribute('aria-label') || e.textContent || e.getAttribute('placeholder') || (e.labels && e.labels[0] && e.labels[0].textContent) || e.getAttribute('title') || '').trim();
       if (!name && e.type !== 'hidden') out.names.push(e.outerHTML.slice(0, 80));
       const r = e.getBoundingClientRect();
-      if (r.width < 44 - 0.5 || r.height < 44 - 0.5) out.small.push((e.id ? '#' + e.id : e.className || e.tagName) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' "' + (e.getAttribute('aria-label') || e.textContent).trim().slice(0, 24) + '"');
+      if (r.width < 48 - 0.5 || r.height < 48 - 0.5) out.small.push((e.id ? '#' + e.id : e.className || e.tagName) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' "' + (e.getAttribute('aria-label') || e.textContent).trim().slice(0, 24) + '"');
     });
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     const seen = new Set();
@@ -930,7 +962,7 @@ test('a11y: text contrast meets WCAG AA (4.5:1, 3:1 for large text)', async (s) 
   eq(Array.from(bad), []);
 }, { kind: 'a11y' });
 
-test('a11y: every tap target is at least 44 by 44 px', async (s) => {
+test('a11y: every tap target is at least 48 by 48 px', async (s) => {
   const bad = new Set();
   await screens(s, async (p, where) => { (await a11yIssues(p)).small.forEach((x) => bad.add(where + ': ' + x)); });
   eq(Array.from(bad), []);
