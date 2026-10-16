@@ -15,13 +15,21 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - run: python3 tools/apply_requests.py
-      - name: Save and republish
+      - name: Add new profiles and republish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git add trips.json tools/requests-state.json
-          if git diff --cached --quiet; then exit 0; fi
-          git -c user.name="Trip Status" -c user.email="actions@users.noreply.github.com" commit -m "Trips: apply requests"
-          git push
-          if ! git diff --quiet HEAD~1 -- trips.json; then gh api -X POST "repos/${{ github.repository }}/pages/builds" || true; fi
+          # If someone saves trips.json at the same moment, start again from their version (up to 3 tries).
+          for try in 1 2 3; do
+            python3 tools/apply_requests.py
+            git add trips.json tools/requests-state.json
+            if git diff --cached --quiet; then exit 0; fi
+            git -c user.name="Trip Status" -c user.email="actions@users.noreply.github.com" commit -q -m "Trips: apply requests"
+            if git push -q; then
+              if ! git diff --quiet HEAD~1 -- trips.json; then gh api -X POST "repos/${{ github.repository }}/pages/builds" > /dev/null || true; fi
+              exit 0
+            fi
+            sleep 5
+            git fetch -q origin "$GITHUB_REF_NAME" && git reset -q --hard FETCH_HEAD
+          done
+          exit 1
