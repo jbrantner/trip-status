@@ -1,35 +1,36 @@
 {
- "updated": "2026-10-16T02:13:26.370Z",
+ "updated": "2026-10-16T20:08:22.237Z",
+ "helperAt": "2026-10-16T20:08:21Z",
  "trips": [
-  {
-   "date": "2026-10-15",
-   "time": "09:45",
-   "status": "Assigned"
-  },
   {
    "date": "2026-10-16",
    "time": "13:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202610161315n1"
   },
   {
    "date": "2026-10-21",
    "time": "08:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202610210830n2"
   },
   {
    "date": "2026-10-21",
    "time": "12:45",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202610211245n3"
   },
   {
    "date": "2026-10-21",
    "time": "14:00",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202610211400n4"
   },
   {
    "date": "2026-10-22",
    "time": "09:45",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202610220945n5"
   },
   {
    "date": "2026-10-22",
@@ -38,7 +39,8 @@
    "drivers": [
     "Assigned",
     "Assigned"
-   ]
+   ],
+   "id": "t202610220945n6"
   },
   {
    "date": "2026-10-22",
@@ -47,27 +49,32 @@
    "drivers": [
     "Assigned",
     "Assigned"
-   ]
+   ],
+   "id": "t202610221115n7"
   },
   {
    "date": "2026-10-24",
    "time": "08:30",
-   "status": "Pending"
+   "status": "Assigned",
+   "id": "t202610240830n8"
   },
   {
    "date": "2026-10-24",
    "time": "08:45",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202610240845n9"
   },
   {
    "date": "2026-10-26",
    "time": "11:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202610261130n10"
   },
   {
    "date": "2026-10-28",
    "time": "10:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202610281030n11"
   },
   {
    "date": "2026-10-30",
@@ -76,77 +83,110 @@
    "drivers": [
     "Assigned",
     "Assigned"
-   ]
+   ],
+   "id": "t202610300800n12"
   },
   {
    "date": "2026-11-01",
    "time": "13:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202611011330n13"
   },
   {
    "date": "2026-11-04",
    "time": "07:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202611040715n14"
   },
   {
    "date": "2026-11-04",
    "time": "08:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202611040830n15"
   },
   {
    "date": "2026-11-05",
    "time": "15:34",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202611051534n16"
   },
   {
    "date": "2026-11-11",
    "time": "10:00",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202611111000n17"
   },
   {
    "date": "2026-11-12",
    "time": "15:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202611121515n18"
   },
   {
    "date": "2026-11-12",
    "time": "15:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202611121515n19"
+  },
+  {
+   "date": "2026-11-17",
+   "time": "08:15",
+   "status": "Pending",
+   "id": "th3301e77ua9t"
   },
   {
    "date": "2026-11-17",
    "time": "09:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202611170930n20"
   },
   {
    "date": "2026-11-24",
    "time": "10:45",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202611241045n21"
   },
   {
    "date": "2026-11-25",
    "time": "08:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202611250830n22"
+  },
+  {
+   "date": "2026-12-01",
+   "time": "08:45",
+   "status": "Pending",
+   "id": "th3301osnve2i"
+  },
+  {
+   "date": "2026-12-02",
+   "time": "08:45",
+   "status": "Pending",
+   "id": "th3307e9hohk3"
   },
   {
    "date": "2026-12-02",
    "time": "16:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202612021615n23"
   },
   {
    "date": "2026-12-09",
    "time": "09:45",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202612090945n24"
   },
   {
    "date": "2026-12-09",
    "time": "16:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202612091615n25"
   },
   {
    "date": "2026-12-10",
    "time": "09:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202612100930n26"
   },
   {
    "date": "2026-12-12",
@@ -155,77 +195,92 @@
    "drivers": [
     "Assigned",
     "Assigned"
-   ]
+   ],
+   "id": "t202612120830n27"
   },
   {
    "date": "2026-12-12",
    "time": "08:30",
-   "status": "Pending"
+   "status": "Pending",
+   "id": "t202612120830n28"
   },
   {
    "date": "2026-12-12",
    "time": "08:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202612120830n29"
   },
   {
    "date": "2026-12-13",
    "time": "14:00",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202612131400n30"
   },
   {
    "date": "2026-12-16",
    "time": "08:45",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202612160845n31"
   },
   {
    "date": "2026-12-22",
    "time": "10:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202612221030n32"
   },
   {
    "date": "2027-01-14",
    "time": "14:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202701141415n33"
   },
   {
    "date": "2027-02-16",
    "time": "14:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202702161415n34"
   },
   {
    "date": "2027-03-11",
    "time": "15:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202703111515n35"
   },
   {
    "date": "2027-04-21",
    "time": "07:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202704210730n36"
   },
   {
    "date": "2027-04-29",
    "time": "11:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202704291115n37"
   },
   {
    "date": "2027-04-30",
    "time": "08:20",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202704300820n38"
   },
   {
    "date": "2027-05-13",
    "time": "08:30",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202705130830n39"
   },
   {
    "date": "2027-05-18",
    "time": "15:15",
-   "status": "Assigned"
+   "status": "Assigned",
+   "id": "t202705181515n40"
   },
   {
    "date": "2027-06-17",
    "time": "11:15",
-   "status": "Pending"
+   "status": "Pending",
+   "id": "t202706171115n41"
   }
  ],
  "profiles": [
