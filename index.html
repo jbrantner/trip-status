@@ -179,7 +179,6 @@ button:focus-visible { outline: 3px solid var(--brand2); outline-offset: 2px }
       <p class="edhead">Tap Edit on a trip to change it. Nobody else sees changes until you tap Save.</p>
       <div class="edtools">
         <button class="btn" id="add">+ Add trip</button>
-        <label class="btn">Load Helper file<input type="file" id="file" accept=".json,application/json" hidden></label>
       </div>
       <div class="prof" id="reqBox" hidden>
         <h3>Profile requests</h3>
@@ -339,7 +338,7 @@ function render() {
       : '<span class="chips">' + sl.map(function (x, n) { return '<span class="chip ' + x + '">Driver ' + (n + 1) + (x === 'Assigned' ? ' assigned' : ' pending') + '</span>'; }).join('') + '</span>') + (edm ? '<button class="editbtn" data-i="' + t._i + '">Edit</button></span>' : '</span>') + '</div>';
   });
   if (last) html += '</div></section>';
-  if (!html) html = '<p class="empty">' + (!data ? 'Loading trips…' : edm && !onlyMine && !onlyPending ? 'No upcoming trips. Tap + Add trip or load a Helper file.' : onlyMine ? 'No upcoming trips for ' + esc(meP.initials) + ' yet. Tap All trips, then the ☆ on the trips you want here.' : onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') + '</p>';
+  if (!html) html = '<p class="empty">' + (!data ? 'Loading trips…' : edm && !onlyMine && !onlyPending ? 'No upcoming trips. Tap + Add trip, or Update Trip Status in Helper.' : onlyMine ? 'No upcoming trips for ' + esc(meP.initials) + ' yet. Tap All trips, then the ☆ on the trips you want here.' : onlyPending ? 'No pending trips. Every upcoming trip has a driver.' : 'No upcoming trips posted.') + '</p>';
   document.getElementById('days').innerHTML = html;
   var sb = document.getElementById('saveBar'); if (sb) sb.hidden = !edm;
   if (data && (data.updated || data.exported)) {
@@ -643,13 +642,6 @@ function applyHelper(j) {
   sortEd(); drawEd();
   changed('Loaded ' + ed.length + ' upcoming trip' + (ed.length === 1 ? '' : 's') + ' from Helper. Check the list, then tap Save.');
 }
-document.getElementById('file').onchange = function (e) {
-  var f = e.target.files[0]; if (!f) return;
-  if (f.size > 100000) { upMsg('That file is too big to be a Trip Status file.', true); return; }
-  f.text().then(function (txt) { applyHelper(JSON.parse(txt)); })
-    .catch(function (err) { upMsg(err instanceof SyntaxError ? 'That file could not be read. Export it from Helper again.' : err.message, true); })
-    .then(function () { e.target.value = ''; });
-};
 // Helper's Update button opens this page as #helper=DATA (base64url of the same JSON as its file). The part after # never
 // leaves the browser. The page waits for the published list, applies the trips, saves, then tidies the address back to #edit.
 var helperReq = null, fromHelper = false;
