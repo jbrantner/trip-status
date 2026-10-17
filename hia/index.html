@@ -389,6 +389,36 @@ html .seg button[aria-pressed="true"]{box-shadow:inset 0 0 0 1px #d8d8de}
  html #nav button[aria-current="page"]{background:transparent!important;color:#111!important;font-weight:700}
  html #nav{background:rgba(255,255,255,.96)}
 }
+
+/* ===== Messiah Lifeways colors (maroon #962B42, orange-red #C05133, warm neutrals) ===== */
+:root{--brand:#962B42;--brand-text:#962B42;--brand-soft:rgba(150,43,66,.1);--red:#d1352b}
+.plus,.btn.primary,.fab-add{background:#962B42!important}
+.chki[aria-pressed="true"] .box{background:#962B42!important;border-color:#962B42!important}
+#nav button[aria-current="page"]{background:rgba(150,43,66,.08)!important;color:#962B42!important}
+#nav .trkbtn.in:not([aria-expanded="true"]){background:rgba(150,43,66,.08)!important;color:#962B42!important}
+.fab-i{color:#962B42}
+.sugbtn,.callbtn{background:rgba(150,43,66,.08)}
+.seg button[aria-pressed="true"]{color:#962B42}
+.syncpill.new{background:#C05133}
+.ring{background:conic-gradient(#962B42 calc(var(--p)*1%),rgba(120,120,128,.2) 0)}
+.chgdiff .now{background:rgba(150,43,66,.10)}
+.notif .ap{background:linear-gradient(160deg,#b8475f,#962B42)}
+@media (max-width:760px){#nav button[aria-current="page"]{background:transparent!important}}
+/* Clinic = maroon, solid. Outside = orange-red, outlined and dashed. */
+.c-clin,.c-clab,.c-phys,.c-np,.c-lab{--cat:#962B42;--cat-text:#962B42;--rowbg:rgba(150,43,66,.08);--tagbg:rgba(150,43,66,.10)}
+.c-out,.c-olab{--cat:#C05133;--cat-text:#a8431f;--rowbg:rgba(192,81,51,.08);--tagbg:rgba(192,81,51,.10)}
+/* Trackers in warm neutrals that sit with the brand */
+.c-dme{--cat:#5b4a52;--cat-text:#4a3c43;--rowbg:rgba(91,74,82,.07);--tagbg:rgba(91,74,82,.10)}
+.c-podd,.c-pod{--cat:#9a7b4f;--cat-text:#7a5f39;--rowbg:rgba(154,123,79,.08);--tagbg:rgba(154,123,79,.12)}
+.c-dermd,.c-derm{--cat:#c26a85;--cat-text:#a24d69;--rowbg:rgba(194,106,133,.08);--tagbg:rgba(194,106,133,.12)}
+.c-labs{--cat:#7a3a4c;--cat-text:#7a3a4c}
+/* Shape cues so clinic and outside differ even at a glance */
+.tag.c-out::before,.tag.c-olab::before{background:transparent!important;box-shadow:inset 0 0 0 2px var(--cat);width:8px!important;height:8px!important;margin-top:-4px!important}
+li.row.c-out::after,li.row.c-olab::after{background:repeating-linear-gradient(180deg,var(--cat) 0 6px,transparent 6px 10px)!important;width:3px}
+.pchip.c-out,.pchip.c-olab{background:#fff;box-shadow:inset 0 0 0 1.5px rgba(192,81,51,.55)}
+.pchip.c-clin,.pchip.c-clab{background:rgba(150,43,66,.10)}
+.tcard.c-out .tw::before{content:"Outside · ";font-weight:600}
+.tcard.c-clin .tw::before{content:"Clinic · ";font-weight:600}
 </style>
 </head>
 <body>
