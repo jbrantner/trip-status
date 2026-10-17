@@ -1,0 +1,1112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>HIA Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: iOS-style app. Grouped inset lists on a soft grey canvas, large titles, sidebar on wide screens, bottom tab bar on phones. Light only. */
+:root{
+  --bg:#f2f2f7; --surface:#ffffff; --surface-2:#f7f7fa; --fg:#1c1c1e; --muted:#8a8a8e; --muted-2:#6c6c70; --line:rgba(60,60,67,.12);
+  --brand:#007aff; --brand-ink:#ffffff; --brand-soft:rgba(0,122,255,.1); --brand-text:#007aff; --accent:#ff9500;
+  --ok:#248a3d; --ok-soft:rgba(52,199,89,.14); --warn:#c76a00; --warn-soft:rgba(255,149,0,.14); --bad:#ffffff; --bad-soft:#ff3b30;
+  --info:#007aff; --info-soft:rgba(0,122,255,.1); --violet:#8944ab; --violet-soft:rgba(175,82,222,.12); --teal:#1d8aa0; --teal-soft:rgba(48,176,199,.13); --rose:#d1335b; --rose-soft:rgba(255,45,85,.1);
+  --red:#ff3b30;
+  --radius:14px;
+  --shadow:0 1px 2px rgba(0,0,0,.04);
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.tab{font-variant-numeric:tabular-nums}
+
+/* Category colors (Apple system palette) */
+.c-clin,.c-clab,.c-phys,.c-np,.c-lab{--cat:#007aff;--cat-text:#0062cc;--rowbg:rgba(0,122,255,.07);--tagbg:rgba(0,122,255,.14)}
+.c-out,.c-olab{--cat:#ff9500;--cat-text:#b35f00;--rowbg:rgba(255,149,0,.08);--tagbg:rgba(255,149,0,.18)}
+.c-dme{--cat:#30b0c7;--cat-text:#16798b;--rowbg:rgba(48,176,199,.08);--tagbg:rgba(48,176,199,.18)}
+.c-podd,.c-pod{--cat:#34c759;--cat-text:#1f7a37;--rowbg:rgba(52,199,89,.08);--tagbg:rgba(52,199,89,.18)}
+.c-dermd,.c-derm{--cat:#af52de;--cat-text:#8136a8;--rowbg:rgba(175,82,222,.07);--tagbg:rgba(175,82,222,.16)}
+.c-labs{--cat:#5856d6;--cat-text:#4846b5}
+.c-home{--cat:#636366;--cat-text:#3a3a3c;--tagbg:rgba(99,99,102,.14)}
+.c-fam{--cat:#8e8e93;--cat-text:#545458;--tagbg:rgba(142,142,147,.14)}
+
+/* App shell */
+.app{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100%}
+#nav{position:sticky;top:0;align-self:start;height:100vh;padding:20px 12px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line);background:rgba(249,249,251,.9)}
+#nav::before{content:"HIA Tracker";font-size:22px;font-weight:700;letter-spacing:-.02em;padding:6px 12px 16px}
+#nav button{border:0;background:transparent;text-align:left;padding:9px 12px;border-radius:10px;display:flex;align-items:center;gap:12px;font-size:15px;color:var(--fg)}
+#nav button:hover{background:rgba(120,120,128,.08)}
+#nav button[aria-current="page"]{background:var(--brand);color:#fff;font-weight:600}
+#nav hr{border:0;border-top:1px solid var(--line);margin:8px 6px}
+#nav .ico{width:20px;height:20px}
+.ico{width:16px;height:16px;flex:none}
+.col{min-width:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 60px}
+.col-in{max-width:760px;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding-block:14px 0;max-width:760px;margin:0 auto}
+.mockpill{font-size:12px;color:var(--muted-2);background:rgba(120,120,128,.12);border-radius:20px;padding:3px 10px}
+.plus{width:36px;height:36px;border-radius:50%;border:0;background:var(--brand);color:#fff;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,122,255,.3)}
+.plus svg{width:18px;height:18px}
+main{min-width:0}
+
+/* Large title header */
+.pagehead{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:10px 0 18px}
+.pagehead .grow{flex:1;min-width:180px}
+.pagehead .sub{order:-1;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
+.pagehead .grow{display:flex;flex-direction:column}
+.pagehead h2{margin:0;font-size:34px;font-weight:700;letter-spacing:-.025em;line-height:1.1}
+.pagehead .sub:not(:empty){margin-bottom:2px}
+
+/* Grouped inset lists */
+.stack{display:flex;flex-direction:column;gap:24px;min-width:0}
+.panel{background:var(--surface);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.panel>h3{margin:0;padding:14px 16px 8px;font-size:20px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;background:var(--bg)}
+.panel>h3 .grow{flex:1}
+.panel:has(>h3){background:transparent;box-shadow:none;overflow:visible}
+.panel:has(>h3)>h3{padding:0 4px 8px}
+.panel:has(>h3)>.rows,.panel:has(>h3)>.tbl-scroll,.panel:has(>h3)>ul,.panel:has(>h3)>.road,.panel:has(>h3)>.rules{background:var(--surface);border-radius:var(--radius);overflow:hidden}
+.rows{list-style:none;margin:0;padding:0}
+.row{position:relative;display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;cursor:pointer;background:var(--surface)}
+.row+.row::before,.row+li::before{content:"";position:absolute;top:0;left:16px;right:0;border-top:1px solid var(--line)}
+.row:active{background:var(--surface-2)}
+.row .when{font-weight:600}
+.row .t{font-weight:600;overflow-wrap:anywhere}
+.row .s{color:var(--muted-2);font-size:13.5px;overflow-wrap:anywhere}
+.row .end{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.empty{padding:18px 16px;color:var(--muted);list-style:none}
+li.row[class*="c-"]{background:var(--rowbg)}
+li.row[class*="c-"]::after{content:"";position:absolute;left:6px;top:10px;bottom:10px;width:4px;border-radius:2px;background:var(--cat)}
+li.row[class*="c-"]+li.row[class*="c-"]::before{left:0;border-top-color:rgba(255,255,255,.9);border-top-width:2px}
+
+/* Today / Calendar rows */
+li.row.slim{grid-template-columns:104px minmax(0,1fr);padding:14px 16px 14px 22px;min-height:60px}
+li.row.slim .when{font-size:17px;font-weight:600;letter-spacing:-.01em;display:flex;flex-direction:column;align-items:flex-start;gap:5px}
+li.row.slim .one{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
+.who1{font-size:16px;font-weight:500;color:var(--fg)}
+li.row.trow{grid-template-columns:76px minmax(0,1fr) auto}
+li.row.trow .when small{font-size:11.5px;font-weight:500;color:var(--muted-2)}
+li.row.trow .s{margin-top:2px}
+.trk .cnt{font-size:15px;font-weight:600;color:var(--muted)}
+#nav .ls{display:none}
+#nav .trkbtn .grow{flex:1}
+#nav .tchev2{width:11px;height:11px;transition:transform .15s;opacity:.6}
+#nav .trkbtn[aria-expanded="true"] .tchev2{transform:rotate(90deg)}
+#nav .trkbtn.in:not([aria-expanded="true"]){background:var(--brand);color:#fff}
+#nav .trkbtn.in[aria-expanded="true"]{background:transparent;color:var(--fg);font-weight:600}
+.navsub{display:flex;flex-direction:column;gap:2px;padding-left:22px}
+.navsub button{font-size:14.5px!important}
+.seg.trkseg{display:none;margin-bottom:12px}
+.howlink{border:0;background:transparent;color:var(--brand);font:inherit;font-size:13px;font-weight:500;padding:4px 8px}
+.topbar .grow{flex:1}
+.tag{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:3px 9px;border-radius:20px;background:var(--tagbg,rgba(120,120,128,.14));color:var(--cat-text,var(--muted-2));white-space:nowrap;line-height:1.3;margin-right:6px}
+li.row.slim .one .tag{margin-right:0}
+.nowtag{display:inline-block;background:var(--red);color:#fff;font-size:11px;font-weight:700;letter-spacing:.03em;border-radius:20px;padding:2px 8px;white-space:nowrap}
+li.row.next .nowtag{background:#3a3a3c}
+.inmin{font-size:12.5px;font-weight:500;color:var(--muted-2)}
+.cd{display:block;width:84px;height:4px;border-radius:2px;background:rgba(120,120,128,.18);overflow:hidden}
+.cd i{display:block;height:100%;background:#3a3a3c;border-radius:2px}
+li.row.current{box-shadow:inset 0 0 0 2px var(--red);z-index:1}
+li.row.next{box-shadow:inset 0 0 0 1.5px rgba(58,58,60,.45)}
+li.row.dim{opacity:.5}
+li.row.dim:hover{opacity:.8}
+li.row.done .t{color:var(--muted)}
+.chev{width:14px;height:14px;color:#c7c7cc}
+.kindtxt{color:var(--cat-text);font-weight:600}
+li.pastrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 16px;background:var(--surface-2)}
+.pastlbl{font-size:12px;font-weight:600;color:var(--muted);margin-right:4px}
+.pchip{border:0;border-radius:20px;padding:4px 11px;font-size:13px;font-weight:500;background:var(--tagbg);color:var(--cat-text);opacity:.85}
+.pchip:hover{opacity:1}
+li.dayhead{padding:16px 16px 6px;font-size:13px;font-weight:600;color:var(--muted);background:var(--bg);list-style:none;text-transform:uppercase;letter-spacing:.02em}
+li.dayhead:first-child{padding-top:4px}
+li.dayhead.over{color:var(--red)}
+.panel:has(li.dayhead){background:transparent;box-shadow:none}
+.panel:has(li.dayhead) .rows{display:block}
+.panel:has(li.dayhead) li.dayhead+li.row{border-top-left-radius:var(--radius);border-top-right-radius:var(--radius)}
+.panel:has(li.dayhead) li.row:has(+li.dayhead),.panel:has(li.dayhead) li.row:last-child{border-bottom-left-radius:var(--radius);border-bottom-right-radius:var(--radius)}
+.panel:has(li.dayhead) li.dayhead+li.row::before{display:none}
+.panel:has(li.dayhead) li.row{overflow:hidden}
+
+/* Filter chips (Calendar) */
+.fchips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px;align-items:center}
+.fchip{border:0;background:var(--surface);color:var(--fg);border-radius:20px;padding:6px 13px;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:7px;box-shadow:inset 0 0 0 1px var(--line)}
+.fchip::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--cat)}
+.fchip[aria-pressed="true"]{background:var(--cat);color:#fff;box-shadow:none}
+.fchip[aria-pressed="true"]::before{background:#fff}
+.fchip .ck{display:none}
+.linkbtn{border:0;background:transparent;color:var(--brand);font-size:14px;padding:4px 6px}
+
+/* Controls */
+.btn{border:0;background:rgba(120,120,128,.12);color:var(--brand);border-radius:10px;padding:8px 14px;font-weight:600;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:rgba(120,120,128,.18)}
+.btn.primary{background:var(--brand);color:#fff}
+.btn.small{padding:5px 11px;font-size:13.5px;border-radius:8px}
+.btn.ghost{background:transparent;padding:4px 6px;font-weight:500}
+.panel>h3 .btn.ghost{font-size:15px}
+.timepick{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted-2)}
+.timepick select{font:inherit;padding:5px 8px;border:0;border-radius:8px;background:rgba(120,120,128,.12);color:var(--fg)}
+.bell{border:0;background:rgba(120,120,128,.12);border-radius:8px;padding:5px 10px;font-size:13px;display:inline-flex;align-items:center;gap:5px;color:var(--brand);font-weight:500}
+.bell svg{width:13px;height:13px}
+.seg{display:inline-flex;background:rgba(120,120,128,.12);border-radius:9px;padding:2px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:7px;font-size:13.5px;font-weight:500}
+.seg button[aria-pressed="true"]{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.chip{border:0;background:rgba(120,120,128,.12);border-radius:20px;padding:5px 12px;font-size:13.5px;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--fg);color:#fff}
+
+/* Status pills */
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:3px 10px;font-size:12.5px;font-weight:600;white-space:nowrap;background:rgba(120,120,128,.14);color:var(--muted-2);border:0}
+.p-ok{background:var(--ok-soft);color:var(--ok)}
+.p-warn{background:var(--warn-soft);color:var(--warn)}
+.p-bad{background:var(--bad-soft);color:var(--bad)}
+.p-info{background:var(--info-soft);color:var(--info)}
+.p-violet{background:var(--violet-soft);color:var(--violet)}
+.p-teal{background:var(--teal-soft);color:var(--teal)}
+.p-brand{background:var(--brand-soft);color:var(--brand)}
+.p-custom{background:#fff;color:var(--muted-2);box-shadow:inset 0 0 0 1px rgba(60,60,67,.3)}
+.pillbtn{cursor:pointer;font:inherit;font-size:12.5px;font-weight:600}
+.pillbtn svg{width:9px;height:9px;margin-left:2px}
+li.row[class*="c-"] .pill,tr[class*="c-"] .pill{background:#fff;color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+li.row[class*="c-"] .btn,tr[class*="c-"] .btn{background:#fff}
+.noteline{font-size:13px;color:var(--muted-2);font-style:italic;margin-top:3px;overflow-wrap:anywhere}
+.faxline{font-size:13px;font-weight:600;color:var(--cat-text,var(--warn));margin-top:2px}
+.ride{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:14px}
+.appt-line{font-size:13px;color:var(--muted-2);margin-top:3px}
+.pickup{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--muted-2);margin-top:4px}
+.steps{display:flex;gap:3px}
+.steps i{width:18px;height:4px;border-radius:2px;background:rgba(120,120,128,.2);display:block}
+.steps i.on{background:var(--cat,var(--brand))}
+.kind{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+
+/* Tables (Labs, Due Dates) */
+.tbl-scroll{overflow-x:auto;background:var(--surface);border-radius:var(--radius)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:12.5px;padding:10px 14px;white-space:nowrap;border-bottom:1px solid var(--line)}
+td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr{cursor:pointer}
+tbody tr:last-child td{border-bottom:0}
+tr[class*="c-"]{background:var(--rowbg);box-shadow:inset 4px 0 0 var(--cat)}
+td .who{font-weight:600}
+td .rm{color:var(--muted);font-size:13px}
+
+/* How it works */
+.how{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.how ul{margin:0;padding:12px 16px 14px 34px;display:flex;flex-direction:column;gap:6px;background:var(--surface);border-radius:var(--radius)}
+.how li span{color:var(--muted-2)}
+.road{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px}
+.road div{border-radius:12px;padding:12px;background:var(--surface-2)}
+.road div.now{background:var(--brand-soft)}
+.road b{display:block;margin-bottom:2px}
+.road p{margin:0;color:var(--muted-2);font-size:13.5px}
+.rules{padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px}
+.banner{display:none}
+.sechd{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:0 4px 10px}
+
+/* Details sheet */
+.drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);background:var(--bg);z-index:21;box-shadow:-8px 0 30px rgba(0,0,0,.15);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.drawer header{display:flex;align-items:center;gap:10px;padding:16px 20px 10px}
+.drawer header h3{margin:0;font-size:22px;font-weight:700;letter-spacing:-.015em;flex:1}
+.drawer header .x{border:0;background:rgba(120,120,128,.14);color:var(--muted-2);width:30px;height:30px;border-radius:50%;font-size:18px;line-height:1;display:grid;place-items:center}
+.drawer .body{margin:6px 16px 16px;padding:0 16px;overflow:auto;flex:1 1 auto;background:var(--surface);border-radius:var(--radius);align-self:stretch;max-height:100%}
+.drawer form.body{padding:12px 16px 16px}
+.fld{padding:11px 0;border-bottom:1px solid var(--line)}
+.fld:last-child{border-bottom:0}
+.fld .k{font-size:13px;color:var(--muted)}
+.fld .v{font-weight:500}
+.chk{list-style:none;margin:6px 0 0;padding:0;background:var(--surface);border-radius:12px;overflow:hidden}
+.chk li+li{border-top:1px solid var(--line)}
+.chki{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;padding:12px 14px;font:inherit;font-size:16px;text-align:left;color:var(--fg)}
+.chki .box{width:22px;height:22px;border-radius:50%;border:2px solid #c7c7cc;display:inline-flex;align-items:center;justify-content:center;flex:none;color:#fff}
+.datein{font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);margin-top:4px}
+.docsel{font:inherit;font-size:20px;font-weight:700;letter-spacing:-.01em;padding:8px 34px 8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2 4l3 3 3-3' fill='none' stroke='%23007aff' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center/12px;-webkit-appearance:none;appearance:none;margin-top:4px;color:var(--fg)}
+.dochint{display:block;font-size:12.5px;color:var(--muted);margin-top:4px;font-weight:400;letter-spacing:0}
+h3.doch{display:flex;flex-direction:column;align-items:flex-start}
+.tsub{font-size:15px;font-weight:600;color:var(--muted-2);letter-spacing:0}
+h3.doch .titlein{resize:none;line-height:1.25;font:inherit;font-size:20px;font-weight:700;letter-spacing:-.015em;width:100%;padding:6px 10px;margin-top:4px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg)}
+.fldin{font:inherit;font-size:16px;font-weight:500;width:100%;padding:8px 10px;margin-top:4px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg)}
+h3.doch .docsel{font-size:22px;max-width:100%}
+.chk .chk{margin:0}
+.cu{display:flex;flex-direction:column;gap:2px;min-width:0}
+.custtag{font-size:11px;font-weight:600;color:var(--muted-2);background:rgba(120,120,128,.14);border-radius:20px;padding:1px 7px;margin-left:8px;vertical-align:2px}
+.cunote{font-size:13.5px;color:var(--muted-2);font-style:italic;overflow-wrap:anywhere}
+.subs{list-style:none;margin:0;padding:0 0 4px 34px}
+.subs li+li{border-top:1px solid var(--line)}
+.chki.sub{padding:9px 14px;font-size:15px}
+.chki.sub .box{width:18px;height:18px}
+.addbtn{color:var(--brand)}
+.plus1{width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:400;flex:none}
+.addform form{display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+.addform input,.addform textarea{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface);width:100%}
+.addform textarea{min-height:56px;resize:vertical}
+.addform .two{display:flex;gap:8px;justify-content:flex-end}
+.tcard{margin-bottom:10px;border-left:4px solid var(--cat)}
+.tcard .thead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;width:100%;border:0;background:var(--rowbg);text-align:left;padding:12px 14px;font:inherit;color:var(--fg)}
+.tcard .tw{font-size:13px;font-weight:600;color:var(--cat-text)}
+.tcard .tt{grid-column:1;font-size:17px;font-weight:600}
+.tcard .tr{grid-column:1;font-size:14px;color:var(--muted-2)}
+.tcard .tp{grid-column:2;grid-row:1/4;align-self:center;font-size:13px;font-weight:600;color:var(--muted-2)}
+.tcard .chk{border-radius:0;margin:0}
+.tcard .tp{display:flex;align-items:center;gap:6px}
+.tcard .tchev{width:12px;height:12px;transition:transform .15s}
+.tcard.open .tchev{transform:rotate(180deg)}
+.ring{width:18px;height:18px;border-radius:50%;background:conic-gradient(#34c759 calc(var(--p)*1%),rgba(120,120,128,.2) 0);-webkit-mask:radial-gradient(circle,transparent 5px,#000 5.5px);mask:radial-gradient(circle,transparent 5px,#000 5.5px)}
+.tgrp{margin-top:22px}
+.tgrp:first-of-type{margin-top:0}
+.tday{margin:14px 4px 8px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.upgrp{display:flex;align-items:center;gap:10px;width:100%;margin-top:26px;border:0;border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);padding:14px 16px;font:inherit;font-size:20px;font-weight:700;letter-spacing:-.01em;color:var(--fg);text-align:left}
+.upgrp .grow{flex:1}.upgrp .cnt{font-size:15px;font-weight:600;color:var(--muted)}
+.upgrp .tchev{width:13px;height:13px;transition:transform .15s;color:var(--muted)}
+.upgrp[aria-expanded="true"] .tchev{transform:rotate(180deg)}
+.upbody{opacity:.75}
+.labrow{grid-template-columns:minmax(0,1fr) auto!important}
+.labrow .end .tag{margin-right:0}
+.labrow .cnt{font-size:13.5px;color:var(--muted-2);font-weight:500;margin-left:4px}
+.chk li:has(.labx){display:flex;align-items:center}
+.labx{border:0;background:transparent;color:#c7c7cc;font-size:22px;line-height:1;padding:8px 14px 8px 4px}
+.labx:hover{color:var(--red)}
+.labsug{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sugbtn{border:0;border-radius:20px;background:rgba(0,122,255,.1);color:var(--brand);font:inherit;font-size:14px;font-weight:500;padding:6px 12px}
+.sugbtn.custom{background:rgba(120,120,128,.14);color:var(--fg)}
+.sughint{font-size:12.5px;color:var(--muted);width:100%}
+.labi .grow{flex:1;display:flex;flex-direction:column}
+.donetog{display:block;width:100%;border:0;background:transparent;color:var(--muted-2);font:inherit;font-size:13.5px;font-weight:500;padding:10px 14px;text-align:left}
+.infosearch{margin:0 0 4px;font-size:17px;padding:10px 14px}
+.infrow{grid-template-columns:minmax(0,1fr) auto!important;cursor:default}
+.callbtn{display:inline-block;background:rgba(0,122,255,.1);color:var(--brand);border-radius:20px;padding:6px 12px;font-size:15px;font-weight:600;text-decoration:none;white-space:nowrap}
+span.callbtn{background:rgba(120,120,128,.12);color:var(--fg)}
+.numform{display:flex;flex-direction:column;gap:8px;padding:14px}
+.numform .two{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:8px}
+.numform .fldin{margin-top:0}
+.noterow{grid-template-columns:minmax(0,1fr) auto!important;cursor:default;align-items:start}
+.ntext{font-size:16px;overflow-wrap:anywhere}
+#syncslot{flex:none}
+.syncpill{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:20px;background:rgba(120,120,128,.14);color:var(--fg);font:inherit;font-size:13px;font-weight:600;padding:5px 11px;margin-left:4px}
+.syncpill.new{background:#ff9500;color:#fff}
+.syncpill svg{width:14px;height:14px}
+.chgintro{font-size:14px;color:var(--muted-2);margin:0 0 6px}
+.chg{background:var(--surface);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:inset 0 0 0 1px var(--line)}
+.chgh{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted-2)}
+.chgh b{color:var(--fg)}
+.chgw{font-weight:600;margin:4px 0 8px}
+.chgdiff{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chgdiff svg{width:16px;height:16px;color:var(--muted)}
+.chgdiff .was{text-decoration:line-through;color:var(--muted-2);background:rgba(255,59,48,.08);border-radius:6px;padding:2px 8px}
+.chgdiff .now{font-weight:600;background:rgba(52,199,89,.14);border-radius:6px;padding:2px 8px}
+.chgnote{font-size:13px;color:#b35f00;margin-top:8px}
+.chgacts{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.syncbox{background:rgba(255,149,0,.12);border-radius:12px;padding:10px 12px;margin:4px 0 10px;font-size:14px;display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.seg.modeseg{display:flex;width:100%;max-width:360px;margin:4px 0 6px}.modeseg button{flex:1;padding:7px 12px}
+main.col-in{padding-bottom:130px}
+.fabs{position:fixed;right:max(20px,env(safe-area-inset-right,0px));bottom:24px;z-index:14;display:flex;flex-direction:column;gap:12px;align-items:center}
+.fab{border:0;border-radius:50%;display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.fab-add{width:58px;height:58px;background:#111;color:#fff}.fab-add svg{width:24px;height:24px}
+.fab-i{width:44px;height:44px;background:#fff;color:#111;font:700 20px/1 Georgia,"Times New Roman",serif;font-style:italic;box-shadow:0 4px 14px rgba(0,0,0,.14),inset 0 0 0 1px #e5e5ea}
+@media (max-width:760px){.fabs{bottom:calc(84px + env(safe-area-inset-bottom,0px));right:16px}}
+.addgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 0}
+.addopt{display:flex;align-items:center;gap:10px;border:0;border-radius:12px;background:#f5f5f7;padding:14px 12px;font:inherit;font-size:15px;font-weight:600;color:var(--fg);text-align:left}
+.addopt .dot{width:10px;height:10px;border-radius:50%;background:var(--cat,#8e8e93);flex:none}
+.addopt:hover{background:#ececf0}
+.tdetails{display:block;width:100%;border:0;border-top:1px solid var(--line);background:var(--surface);color:var(--brand);font:inherit;font-size:15px;padding:12px 14px;text-align:left}
+.chki .box svg{width:13px;height:13px}
+.chki[aria-pressed="true"] .box{background:#34c759;border-color:#34c759}
+.chki[aria-pressed="true"]{color:var(--muted)}
+.drawer .acts{display:flex;gap:8px;flex-wrap:wrap;padding:4px 16px 16px}
+.drawer .acts .btn{flex:1;justify-content:center;padding:12px}
+.notebox{width:100%;min-height:80px;padding:10px;border:0;border-radius:10px;background:var(--surface-2);font:inherit;resize:vertical;margin-top:4px;color:var(--fg)}
+.form label{display:block;font-size:13px;font-weight:600;color:var(--muted-2);margin:12px 0 5px}
+.form input,.form select{width:100%;padding:9px 11px;border:0;border-radius:10px;background:var(--surface-2);color:var(--fg);font:inherit}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form .hint{font-size:12.5px;color:var(--muted);margin-top:4px}
+
+/* Status menu */
+.menu{position:fixed;z-index:40;background:rgba(255,255,255,.96);backdrop-filter:blur(16px);border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.18);width:230px;padding:6px}
+.menu .mh{font-size:12.5px;color:var(--muted);padding:6px 10px 4px}
+.menu button.mi{display:flex;align-items:center;width:100%;border:0;background:transparent;padding:9px 10px;text-align:left;border-radius:8px;gap:8px;font-size:15px}
+.menu button.mi:hover,.menu button.mi:focus-visible{background:rgba(120,120,128,.1)}
+.menu button.mi .ck{width:14px;color:var(--brand);font-weight:700}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.menu form{display:flex;flex-direction:column;gap:6px;padding:6px 8px 8px}
+.menu input{width:100%;padding:8px 10px;border:0;border-radius:8px;background:var(--surface-2);font:inherit}
+
+/* Toast + notification */
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));z-index:30;background:rgba(28,28,30,.92);color:#fff;padding:10px 16px;border-radius:14px;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:min(460px,calc(100% - 32px));display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.toast .phone{flex:none;width:18px;height:18px}
+.toast b{display:block}
+.notif{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:max(10px,env(safe-area-inset-right,0px));z-index:50;width:min(380px,calc(100% - 20px));background:rgba(245,245,247,.92);backdrop-filter:blur(20px);border-radius:20px;box-shadow:0 10px 40px rgba(0,0,0,.2);padding:12px 14px;display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px;cursor:pointer;text-align:left;border:0;font:inherit;color:var(--fg)}
+.notif .ap{width:38px;height:38px;border-radius:9px;background:linear-gradient(160deg,#3d8bff,#0062cc);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px}
+.notif .hd{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted-2);margin-bottom:1px}
+.notif .tt{font-weight:600;font-size:15px}
+.notif .bd{font-size:14px;line-height:1.35}
+@media (prefers-reduced-motion:no-preference){.notif{animation:drop .4s cubic-bezier(.2,.9,.3,1.15)}@keyframes drop{from{transform:translateY(-130%);opacity:0}}.drawer{animation:slide .22s ease-out}@keyframes slide{from{transform:translateX(30px);opacity:.6}}}
+
+@media (max-width:900px){.how{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  #nav{position:fixed;top:auto;left:0;right:0;bottom:0;height:auto;z-index:15;flex-direction:row;justify-content:space-around;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));border-right:0;border-top:1px solid var(--line);background:rgba(249,249,251,.92);backdrop-filter:blur(20px)}
+  #nav::before,#nav hr{display:none}
+  #nav button{flex-direction:column;gap:3px;font-size:10.5px;padding:4px 2px;flex:1;align-items:center;text-align:center;color:var(--muted)}
+  #nav button[aria-current="page"]{background:transparent;color:var(--brand);font-weight:600}
+  #nav .ico{width:24px;height:24px}
+  #nav .lf{display:none}#nav .ls{display:inline}
+  .lf2{display:none}.howlink,.mockpill,.syncpill{white-space:nowrap}.howlink{padding:4px 4px}
+  .navsub,#nav .tchev2{display:none!important}
+  #nav .trkbtn .grow{flex:none}
+  #nav .trkbtn.in{background:transparent!important;color:var(--brand)!important;font-weight:600}
+  .seg.trkseg{display:inline-flex;width:100%}.trkseg button{flex:1}
+  #nav button{font-size:10px}
+  li.row.trow{grid-template-columns:62px minmax(0,1fr)}
+  li.row.trow .end{grid-column:2;justify-content:flex-start}
+  .col{padding-bottom:110px}
+  .pagehead h2{font-size:30px}
+  li.row.slim{grid-template-columns:88px minmax(0,1fr)}
+  li.row.slim .one{gap:6px}
+  .road{grid-template-columns:minmax(0,1fr)}
+  .drawer{width:100%}
+}
+
+/* Minimal look */
+html{--bg:#ffffff;--surface:#fff;--surface-2:#fafafa;--line:#ececf0;--radius:12px;--shadow:none;--font:"Inter",-apple-system,"Segoe UI",sans-serif;--brand:#111111;--brand-text:#111;--fg:#111;--muted:#8e8e93;--muted-2:#5f5f66}
+html .panel,html .panel:has(>h3)>.rows,html .tcard,html .chg{box-shadow:inset 0 0 0 1px #ececf0!important}
+html #nav{background:#fff;border-right:1px solid #ececf0}
+html #nav button[aria-current="page"]{background:#f2f2f4;color:#111}
+html li.row[class*="c-"],html .tcard .thead{background:#fff!important}
+html li.row[class*="c-"]::after{width:3px;left:0;top:14px;bottom:14px}
+html .tag{background:transparent;padding-left:14px;position:relative;color:var(--cat-text)}
+html .tag::before{content:"";position:absolute;left:3px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:var(--cat,#8e8e93)}
+html .pagehead h2{font-weight:700;font-size:30px;letter-spacing:-.03em}
+html .pagehead .sub{text-transform:none;letter-spacing:0;font-weight:500}
+html .tcard{border-left:0}
+html .plus{background:#111}
+html .btn.primary{background:#111}
+html .chki[aria-pressed="true"] .box{background:#111;border-color:#111}
+html .seg button[aria-pressed="true"]{box-shadow:inset 0 0 0 1px #d8d8de}
+
+@media (max-width:760px){
+ html #nav button[aria-current="page"]{background:transparent!important;color:#111!important;font-weight:700}
+ html #nav{background:rgba(255,255,255,.96)}
+}
+</style>
+</head>
+<body>
+
+
+<div class="app">
+  <nav id="nav" aria-label="Sections"></nav>
+  <div class="col">
+    <div class="topbar"><span class="mockpill">Mock-up<span class="lf2"> · made-up names</span></span><button type="button" class="howlink" data-go="how">How it works</button><span id="syncslot"></span><span class="grow"></span></div>
+    <main id="main" class="col-in"></main>
+  </div>
+</div>
+
+<div id="layer"></div><div class="fabs"><button type="button" class="fab fab-i" data-go="info" aria-label="Information: numbers and extensions">i</button><button type="button" class="fab fab-add" data-addmenu aria-label="Add"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg></button></div>
+
+<script>
+(function(){
+"use strict";
+var T0=new Date(); T0.setHours(0,0,0,0);
+function D(off,hm){var d=new Date(T0);d.setDate(d.getDate()+off);if(hm){var p=hm.split(":");d.setHours(+p[0],+p[1])}return d}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function dayDiff(d){var a=new Date(d);a.setHours(0,0,0,0);return Math.round((a-T0)/864e5)}
+var DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fTime(d){var h=d.getHours(),m=d.getMinutes();return (h%12||12)+":"+(m<10?"0":"")+m+" "+(h<12?"AM":"PM")}
+function fDate(d){return DOW[d.getDay()]+" "+MON[d.getMonth()]+" "+d.getDate()}
+function fRel(d){var n=dayDiff(d);if(n===0)return "Today";if(n===1)return "Tomorrow";if(n===-1)return "Yesterday";return fDate(d)}
+function sameDay(a,b){return dayDiff(a)===dayDiff(b)}
+
+/* ---------- Made-up practice data ---------- */
+var R={
+ r1:["Juniper Cobalt","Nittany 104"], r2:["Willow Amber","Hopewell 211"], r3:["Hazel Indigo","Laurel 308"],
+ r4:["Aspen Russet","Nittany 112"], r5:["Clover Slate","Hopewell 203"], r6:["Poppy Saffron","Laurel 315"],
+ r7:["Birch Cerulean","Nittany 120"], r8:["Rowan Ochre","Laurel 302"], r9:["Sorrel Umber","Hopewell 218"],
+ r10:["Tansy Violet","Nittany 107"], r11:["Yarrow Jade","Laurel 321"], r12:["Bramble Pewter","Hopewell 225"]
+};
+var TAG={"DMEDue":["DME Due","c-dme"],"PodDue":["Podiatry Due","c-podd"],"DermDue":["Dermatology Due","c-dermd"],"Clinic":["Clinic Appointment","c-clin"],"Outside":["Outside Appointment","c-out"],"Physician":["Physician","c-phys"],"Nurse Practitioner":["NP","c-np"],"Podiatry":["Podiatry","c-pod"],"Dermatology":["Dermatology","c-derm"],"Homecare":["Homecare Pickup","c-home"],"Family":["Family Ride","c-fam"],"Lab Draw":["Lab","c-lab"],"ClinicLab":["Clinic Lab","c-clab"],"OutLab":["Outside Lab","c-olab"],"DME":["DME","c-fam"]};
+function tagKey(a){return a.spec==="Outside"?(a.transport==="Homecare"?"Homecare":"Family"):a.spec}
+function tagHtml(k){var t=TAG[k];return '<span class="tag '+t[1]+'">'+t[0]+"</span>"}
+var CALC={"Clinic":{c:"#3567d6",bg:"#edf3fe"},"Outside":{c:"#e0841f",bg:"#fdf3e4"},"Clinic Lab":{c:"#3567d6",bg:"#ffffff"},"Outside Lab":{c:"#e0841f",bg:"#ffffff"}};
+var SPEC={
+ "Physician":{c:"#2f3a56",bg:"#eceff5",p:"p-info"},
+ "Nurse Practitioner":{c:"#18928f",bg:"#e3f4f3",p:"p-brand"},
+ "Podiatry":{c:"#e0841f",bg:"#fdf1df",p:"p-teal"},
+ "Dermatology":{c:"#7b5bd6",bg:"#efeafc",p:"p-warn"},
+ "Outside":{c:"#3a4252",bg:"#eef0f4",p:"p-ok"},
+ "Lab Draw":{c:"#c9ced9",bg:"#ffffff",p:"p-brand"}
+};
+function dueDoc(d){return d.doc||(d.cat==="Podiatry"?DOCS[2]:DOCS[3])}
+function outTitle(a){return a.title||[a.prov,a.atype].filter(Boolean).join(" · ")||"Outside Appointment"}
+var DOCS=["Sage Linden, MD","Thistle Marsh, CRNP","Fennel Brook, DPM","Basil Grove, MD"];
+/* Placeholder schedule until the real rules come in: Podiatry and Dermatology days use their doctor; otherwise Dr. Sage Mon/Wed/Fri, NP Thistle Tue/Thu */
+function docFor(a){if(a.doc)return a.doc;if(a.spec==="Podiatry")return DOCS[2];if(a.spec==="Dermatology")return DOCS[3];var w=a.at.getDay();return (w===2||w===4)?DOCS[1]:DOCS[0]}
+var PROV={"Physician":"Sage Linden, MD","Nurse Practitioner":"Thistle Marsh, CRNP","Podiatry":"Fennel Brook, DPM","Dermatology":"Basil Grove, MD"};
+var PICK=["Scheduled","On The Way","Picked Up","At Appointment","Back Home"];
+var LAB=["Ordered","Drawn","Results In","Sent To Provider"],LAB_OUT=["Ordered","Drawn","Results In","Faxed"];
+function isOut(l){return l.src==="Outside"}
+function steps(l){return isOut(l)?LAB_OUT:LAB}
+function labDone(l){var st=steps(l);return l.status===st[st.length-1]}
+function nextLab(l){var st=steps(l),i=st.indexOf(l.status);return i>=0&&i<st.length-1?st[i+1]:null}
+function labTag(l){return tagHtml(isOut(l)?"OutLab":"ClinicLab")}
+function sendTo(l){return isOut(l)?"Fax to "+l.fax+" · "+l.faxNo:"Clinic · "+l.by}
+var CAT={"Podiatry":"Podiatry","Dermatology":"Dermatology"};
+
+var appts=[
+ {id:"a1",tasks:{"Chart Retrieved":true},custom:[{t:"Family meeting follow-up",note:"Son asked for a call after the visit",done:false,subs:[{t:"Call son",done:true},{t:"Send visit summary",done:false}]}],spec:"Physician",res:"r1",at:D(0,"08:30"),where:"Clinic",labs:["l1"],status:"Scheduled",note:"Monthly visit"},
+ {id:"a2",spec:"Podiatry",res:"r3",at:D(0,"09:00"),where:"Clinic",labs:[],status:"Scheduled",note:"Nail care"},
+ {id:"a3",spec:"Podiatry",res:"r9",at:D(0,"09:20"),where:"Clinic",labs:[],status:"Scheduled",note:"Nail care"},
+ {id:"a4",spec:"Outside",res:"r4",at:D(0,"10:00"),where:"Riverbend Heart Group",prov:"Dr. Larkspur",atype:"Cardiology",labs:[],transport:"Homecare",pickup:D(0,"09:15"),back:D(0,"11:45"),pstat:"Scheduled",status:"Scheduled",note:"Bring med list"},
+ {id:"a5",spec:"Nurse Practitioner",res:"r7",at:D(0,"11:00"),where:"Clinic",labs:["l6"],status:"Scheduled",note:"Follow-up"},
+ {id:"a6",spec:"Outside",res:"r6",at:D(0,"13:30"),where:"Clearwater Eye Center",prov:"Dr. Primrose",atype:"Eye Exam",labs:[],transport:"Homecare",pickup:D(0,"12:45"),back:D(0,"15:00"),pstat:"Scheduled",status:"Scheduled",note:"Eyes may be dilated"},
+ {id:"a7",spec:"Dermatology",res:"r10",at:D(0,"14:00"),where:"Clinic",labs:[],status:"Scheduled",note:"Skin check"},
+ {id:"a8",spec:"Outside",res:"r12",at:D(0,"15:00"),where:"Maple Street Dental",prov:"Dr. Wren",atype:"Dental Cleaning",labs:[],transport:"Family",pickup:D(0,"14:30"),back:D(0,"16:30"),pstat:"Scheduled",status:"Scheduled",note:"Daughter driving"},
+ {id:"a9",spec:"Physician",res:"r2",at:D(1,"08:30"),where:"Clinic",labs:[],status:"Scheduled",note:"Monthly visit"},
+ {id:"a10",spec:"Physician",res:"r5",at:D(1,"09:00"),where:"Clinic",labs:[],status:"Scheduled",note:"Monthly visit"},
+ {id:"a11",spec:"Outside",res:"r11",at:D(1,"10:30"),where:"Valley Outpatient Lab",prov:"Valley Outpatient Lab",atype:"Lab Work",labs:[],transport:"Homecare",pickup:D(1,"10:00"),back:D(1,"11:30"),pstat:"Scheduled",status:"Scheduled",note:"INR check"},
+ {id:"a12",spec:"Podiatry",res:"r6",at:D(2,"09:00"),where:"Clinic",labs:[],status:"Scheduled",note:"Nail care"},
+ {id:"a13",spec:"Nurse Practitioner",res:"r8",at:D(2,"13:00"),where:"Clinic",labs:[],status:"Scheduled",note:"Follow-up"},
+ {id:"a14",spec:"Dermatology",res:"r8",at:D(3,"10:00"),where:"Clinic",labs:[],status:"Scheduled",note:"Yearly skin check"},
+ {id:"a15",spec:"Physician",res:"r10",at:D(3,"08:30"),where:"Clinic",labs:["l7"],status:"Scheduled",note:"Monthly visit"},
+ {id:"a16",spec:"Outside",res:"r2",at:D(4,"14:00"),where:"Summit Bone & Joint",prov:"Dr. Larkspur",atype:"Orthopedics",labs:[],transport:"Homecare",pickup:D(4,"13:15"),back:D(4,"15:30"),pstat:"Scheduled",status:"Scheduled",note:"Bring X-ray disc"},
+ {id:"a17",spec:"Physician",res:"r9",at:D(-1,"08:30"),where:"Clinic",labs:["l3"],status:"Seen",note:"Monthly visit"},
+ {id:"a18",tasks:{"Doctor paperwork signed by PCP":true,"Faxed to pharmacy":true},spec:"Outside",res:"r5",at:D(-2,"11:00"),where:"Summit Foot Center",prov:"Dr. Primrose",atype:"Podiatry Surgery Consult",labs:[],transport:"Homecare",pickup:D(-2,"10:15"),back:D(-2,"12:30"),pstat:"Back Home",status:"Seen",note:""}
+];
+var labs=[
+ {id:"l1",res:"r1",test:"CBC",at:D(0,"07:30"),fast:true,by:"Sage Linden, MD",status:"Ordered",visit:"a1"},
+ {id:"l10",res:"r1",test:"CMP",at:D(0,"07:30"),fast:true,by:"Sage Linden, MD",status:"Ordered",visit:"a1"},
+ {id:"l11",res:"r1",test:"Lipid Panel",at:D(0,"07:30"),fast:true,by:"Sage Linden, MD",status:"Ordered",visit:"a1"},
+ {id:"l12",res:"r1",test:"A1C",at:D(0,"07:30"),fast:true,by:"Sage Linden, MD",status:"Ordered",visit:"a1"},
+ {id:"l13",res:"r1",test:"Vitamin D",at:D(0,"07:30"),fast:true,by:"Sage Linden, MD",status:"Ordered",visit:"a1"},
+ {id:"l14",res:"r7",test:"Free T4",at:D(0,"07:50"),fast:false,by:"NP Thistle",status:"Ordered",visit:"a5"},
+ {id:"l15",res:"r7",test:"CBC",at:D(0,"07:50"),fast:false,by:"NP Thistle",status:"Ordered",visit:"a5"},
+ {id:"l16",res:"r9",test:"BMP",at:D(-2,"07:30"),fast:false,by:"Sage Linden, MD",status:"Results In"},
+ {id:"l2",res:"r8",test:"BMP",at:D(0,"07:45"),fast:false,by:"Dr. Larkspur",src:"Outside",fax:"Riverbend Heart Group",faxNo:"111-111-1111",status:"Drawn"},
+ {id:"l6",res:"r7",test:"TSH",at:D(0,"07:50"),fast:false,by:"NP Thistle",status:"Ordered",visit:"a5"},
+ {id:"l3",res:"r9",test:"A1C",at:D(-2,"07:30"),fast:false,by:"Sage Linden, MD",status:"Redraw Needed",note:"Sample hemolyzed, lab asked for a redraw",visit:"a17"},
+ {id:"l4",res:"r5",test:"Lipid Panel",at:D(-4,"07:30"),fast:true,by:"Sage Linden, MD",status:"Sent To Provider"},
+ {id:"l9",res:"r6",test:"CBC",at:D(-3,"07:30"),fast:false,by:"Dr. Wren",src:"Outside",fax:"Clearwater Eye Center",faxNo:"111-111-1111",status:"Faxed"},
+ {id:"l8",res:"r3",test:"Urinalysis",at:D(-5,"08:00"),fast:false,by:"Dr. Primrose",src:"Outside",fax:"Summit Urology",faxNo:"111-111-1111",status:"Results In",note:"Office wants results by Tuesday"},
+ {id:"l5",res:"r11",test:"INR",at:D(1,"07:30"),fast:false,by:"Dr. Larkspur",src:"Outside",fax:"Riverbend Heart Group",faxNo:"111-111-1111",status:"Ordered"},
+ {id:"l7",res:"r10",test:"CMP",at:D(3,"07:30"),fast:true,by:"Sage Linden, MD",status:"Ordered",visit:"a15"}
+];
+var dues=[
+ {id:"d1",cat:"DME",res:"r5",item:"Oxygen concentrator filter",due:D(-2)},
+ {id:"d2",cat:"DME",res:"r11",item:"CPAP supplies",due:D(6)},
+ {id:"d3",cat:"DME",res:"r2",item:"Wheelchair cushion",due:D(13)},
+ {id:"d4",cat:"DME",res:"r4",item:"Walker safety check",due:D(160)},
+ {id:"d5",cat:"DME",res:"r12",item:"Pressure mattress",due:D(20),tasks:{"SLUMS Distributed":true}},
+ {id:"d6",cat:"Podiatry",res:"r3",item:"Routine foot care",last:D(-60),every:60},
+ {id:"d7",cat:"Podiatry",res:"r9",item:"Routine foot care",last:D(-58),every:60},
+ {id:"d8",cat:"Podiatry",res:"r6",item:"Routine foot care",last:D(-58),every:60},
+ {id:"d9",cat:"Podiatry",res:"r1",item:"Routine foot care",last:D(-66),every:60},
+ {id:"d10",cat:"Podiatry",res:"r12",item:"Routine foot care",last:D(-12),every:60},
+ {id:"d11",cat:"Dermatology",res:"r10",item:"Skin check",last:D(-178),every:180},
+ {id:"d12",cat:"Dermatology",res:"r8",item:"Yearly skin check",last:D(-362),every:365},
+ {id:"d13",cat:"Dermatology",res:"r7",item:"Skin check",last:D(-40),every:180},
+ {id:"d14",cat:"Dermatology",res:"r4",item:"Skin check",last:D(-190),every:180}
+];
+
+/* ---------- Derived ---------- */
+function rn(id){return R[id][0]} function rr(id){return R[id][1]}
+function apptById(id){return appts.filter(function(a){return a.id===id})[0]}
+function labById(id){return labs.filter(function(a){return a.id===id})[0]}
+function dueById(id){return dues.filter(function(a){return a.id===id})[0]}
+function nextDue(d){if(d.due)return d.due;var x=new Date(d.last);x.setDate(x.getDate()+d.every);return x}
+function scheduledFor(d){
+  if(!CAT[d.cat])return null;
+  return appts.filter(function(a){return a.res===d.res&&a.spec===d.cat&&a.status!=="Seen"&&dayDiff(a.at)>=0}).sort(function(a,b){return a.at-b.at})[0]||null;
+}
+function dueState(d){
+  if(d.doneAt)return {label:"Done "+fRel(d.doneAt),p:"p-ok",rank:5};
+  var s=scheduledFor(d); if(s) return {label:"Scheduled "+fRel(s.at),p:"p-info",rank:3};
+  var n=dayDiff(nextDue(d));
+  if(n<0)return {label:"Overdue "+(-n)+(n===-1?" day":" days"),p:"p-bad",rank:0};
+  if(n<=7)return {label:"Due This Week",p:"p-warn",rank:1};
+  if(n<=30)return {label:"Due This Month",p:"p-brand",rank:2};
+  return {label:"Up To Date",p:"p-ok",rank:4};
+}
+function labStatusBtn(l){return '<button type="button" class="pill pillbtn '+(labPill(l.status)||"p-custom")+'" data-labmenu="'+l.id+'" aria-haspopup="menu" title="Change status">'+esc(l.status)+'<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 4l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></button>'}
+function noteLine(l){return l.note?'<div class="noteline">Note: '+esc(l.note)+"</div>":""}
+function labPill(s){return {"Ordered":"p-brand","Drawn":"p-warn","Results In":"p-info","Sent To Provider":"p-ok","Faxed":"p-ok"}[s]}
+function pickPill(s){return {"Scheduled":"","On The Way":"p-warn","Picked Up":"p-teal","At Appointment":"p-info","Back Home":"p-ok"}[s]}
+function visitPill(a){return a.status==="Seen"?"p-ok":""}
+
+/* ---------- State ---------- */
+var state={view:"today",calSel:{Clinic:1,Outside:1,Labs:1,DME:1,Podiatry:1,Dermatology:1},demoMin:null,todayFilter:"All",calWeek:0,calFilter:"All",labFilter:"Open",dueCat:"All",outFilter:"Upcoming"};
+(function(){var m=/[?&]t=(\d{1,2}):?(\d{2})/.exec(location.search+location.hash);if(m)state.demoMin=(+m[1])*60+(+m[2])})();
+try{var sv=localStorage.getItem("hia-view");if(sv)state.view=sv}catch(e){}
+if(/^#(notes|info|today|todo|calendar|labs|dme|podiatry|dermatology|how)$/.test(location.hash))state.view=location.hash.slice(1);
+if(state.view==="outside"||state.view==="calendar"){state.view="today";state.todayMode="cal"}
+if(state.view==="dues")state.view="today";
+if(isTrk(state.view))state.trkOpen=true;
+
+var TRKNAV=[ ["dme","DME",'<path d="M5 3a1.3 1.3 0 1 0 .01 0M5 5.5v4h4l1.5 3.5M5 7.5h3.5M3.5 8.5a3.5 3.5 0 1 0 5 3.8" fill="none" stroke="currentColor" stroke-width="1.4"/>'],
+ ["podiatry","Podiatry",'<path d="M6 2.5c-1.6 0-2.5 2-2.5 4.5 0 2 .8 3 .8 4.5S5 14 6.6 14 9 12.8 9 11c0-1.2-.8-2-.8-3.3 0-1.6.8-2.2.8-3.4C9 3.3 7.6 2.5 6 2.5zM10.5 3.2a.8.8 0 1 0 .01 0M12 5a.7.7 0 1 0 .01 0M12.6 7a.6.6 0 1 0 .01 0" fill="none" stroke="currentColor" stroke-width="1.3"/>'],
+ ["dermatology","Dermatology",'<path d="M8 2.5c2 2.6 4 4.8 4 7a4 4 0 0 1-8 0c0-2.2 2-4.4 4-7zM6.3 10a1.8 1.8 0 0 0 1.7 1.7" fill="none" stroke="currentColor" stroke-width="1.4"/>',"Derm"]];
+var NAV=[
+ ["today","Calendar",'<path d="M2 4h12v10H2zM2 7h12M5 2v3M11 2v3M5 10h2M9 10h2" fill="none" stroke="currentColor" stroke-width="1.4"/>'],
+ ["todo","To Do",'<path d="M3 4.5l1.3 1.3L6.8 3.3M3 9.5l1.3 1.3 2.5-2.5M9 5h4.5M9 10h4.5" fill="none" stroke="currentColor" stroke-width="1.4"/>'],
+ ["labs","Labs",'<path d="M6 2h4M7 2v4l-4 7a1 1 0 0 0 1 1.5h8A1 1 0 0 0 13 13l-4-7V2" fill="none" stroke="currentColor" stroke-width="1.4"/>'],
+ ["trackers","Trackers",'<path d="M2.5 3.5h11v9h-11zM2.5 6.5h11M5.5 9h5M5.5 11h3" fill="none" stroke="currentColor" stroke-width="1.4"/>'],
+ ["notes","Notes",'<path d="M4 2.5h6l2.5 2.5v8.5H4zM10 2.5V5h2.5M6 8h4.5M6 10.5h4.5" fill="none" stroke="currentColor" stroke-width="1.4"/>']
+];
+function counts(){
+  return {
+    today:todayEvents().filter(function(e){return !e.done}).length,
+    outside:appts.filter(function(a){return a.spec==="Outside"&&dayDiff(a.at)>=0&&a.pstat!=="Back Home"}).length,
+    labs:labs.filter(function(l){return !labDone(l)}).length,
+    dues:dues.filter(function(d){return dueState(d).rank<=1}).length
+  };
+}
+function isTrk(v){return v==="dme"||v==="podiatry"||v==="dermatology"}
+function renderNav(){
+  var c=counts(),it=isTrk(state.view),open=!!state.trkOpen;
+  document.getElementById("nav").innerHTML=NAV.map(function(n,i){
+    if(n[0]==="trackers")return '<button type="button" class="trkbtn'+(it?" in":"")+'" data-trkt aria-expanded="'+!!open+'"'+(it?' aria-current="page"':"")+'><svg class="ico" viewBox="0 0 16 16" aria-hidden="true">'+n[2]+'</svg><span class="grow">Trackers</span><svg class="tchev2" viewBox="0 0 10 10" aria-hidden="true"><path d="M3.5 2l3 3-3 3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>'+
+      (open?'<div class="navsub">'+TRKNAV.map(function(t){return '<button type="button" data-go="'+t[0]+'"'+(state.view===t[0]?' aria-current="page"':"")+'><svg class="ico" viewBox="0 0 16 16" aria-hidden="true">'+t[2]+"</svg>"+t[1]+"</button>"}).join("")+"</div>":"");
+    return (n[0]==="how"?"<hr>":"")+'<button type="button" data-go="'+n[0]+'"'+(state.view===n[0]?' aria-current="page"':"")+'><svg class="ico" viewBox="0 0 16 16" aria-hidden="true">'+n[2]+'</svg>'+(n[3]?'<span class="lf">'+n[1]+'</span><span class="ls">'+n[3]+"</span>":n[1])+"</button>";
+  }).join("");
+}
+
+/* ---------- Today ---------- */
+function todayEvents(){
+  var ev=[];
+  appts.forEach(function(a){
+    if(!sameDay(a.at,T0))return;
+    if(a.spec==="Outside") ev.push({t:a.pickup,key:"Outside",type:"appt",id:a.id,res:a.res,a:a,done:a.status==="Seen"});
+    else ev.push({t:a.at,key:"Clinic",type:"appt",id:a.id,res:a.res,a:a,done:a.status==="Seen"});
+  });
+  return ev.sort(function(x,y){return x.t-y.t});
+}
+function nowMin(){if(state.demoMin!=null)return state.demoMin;var d=new Date();return d.getHours()*60+d.getMinutes()}
+function mins(d){return d.getHours()*60+d.getMinutes()}
+function hourLabel(h){return (h%12||12)+" "+(h<12?"AM":"PM")}
+function fMin(m){var d=new Date(T0);d.setMinutes(m);return fTime(d)}
+function dayView(ev){
+  var now=nowMin();
+  // NOW = its 30-minute slot is happening (ends early if the next item starts). UPCOMING = the next item to start.
+  var sorted=ev.slice().sort(function(a,b){return a.t-b.t}),endOf={},upEv=null;
+  sorted.forEach(function(e,i){var m=mins(e.t),nx=sorted[i+1];endOf[e.id]=nx?Math.min(m+30,Math.max(m+1,mins(nx.t))):m+30;if(!upEv&&m>now)upEv=e});
+  var hasCur=sorted.some(function(e){var m=mins(e.t);return now>=m&&now<endOf[e.id]});
+  var past=sorted.filter(function(e){return now>=endOf[e.id]}),rest=sorted.filter(function(e){return now<endOf[e.id]});
+  var html="";
+  if(past.length)html+='<li class="pastrow"><span class="pastlbl">Earlier</span>'+past.map(function(e){return '<button type="button" class="pchip '+TAG[e.key][1]+'" data-open="appt:'+e.a.id+'" title="'+esc(fTime(e.t))+'">'+esc(rn(e.res))+"</button>"}).join("")+"</li>";
+  html+=rest.map(function(e){var m=mins(e.t),cur=now>=m,nx=e===upEv;return evRow(e,cur?"current":nx?(hasCur?"next dim":"next"):"dim",nx?m-now:0)}).join("");
+  if(!rest.length)html+='<li class="empty">That\'s everything for today.</li>';
+  return html;
+}
+function todayLabs(){return labs.filter(function(l){return sameDay(l.at,T0)})}
+function pickupBlock(a){
+  var i=PICK.indexOf(a.pstat);
+  return '<div class="pickup"><span class="steps" aria-hidden="true">'+PICK.map(function(_,k){return '<i class="'+(k<=i?"on":"")+'"></i>'}).join("")+'</span>'+
+    "Appt "+fTime(a.at)+" · back by "+fTime(a.back)+"</div>";
+}
+function nextPickLabel(a){var i=PICK.indexOf(a.pstat);return i<PICK.length-1?PICK[i+1]:null}
+var CHEV='<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+function evRow(e,when,inMin){
+  var a=e.a,flag="";
+  if(when==="current")flag='<span class="nowtag">NOW</span>';
+  else if(/^next/.test(when||"")){
+    var pct=inMin>=60?6:Math.max(6,Math.round(100-inMin/60*100));
+    flag='<span class="nowtag">UPCOMING</span><span class="inmin">in '+(inMin>=60?Math.floor(inMin/60)+"h "+(inMin%60)+"m":inMin+" min")+'</span><span class="cd" aria-hidden="true"><i style="width:'+pct+'%"></i></span>';
+  }
+  return '<li class="row slim '+TAG[e.key][1]+(e.done?" done":"")+(when?" "+when:"")+'" data-open="appt:'+a.id+'" tabindex="0"><div class="when tab">'+fTime(e.t).replace(" ","&nbsp;")+flag+'</div><div class="one">'+tagHtml(e.key)+'<span class="who1">'+esc(rn(a.res))+" · "+esc(rr(a.res))+"</span></div></li>";
+}
+function labRow(l){
+  return '<li class="row labrow c-lab'+(l.status!=="Ordered"?" done":"")+'" data-open="lab:'+l.id+'" tabindex="0"><div><div class="t">'+tagHtml("Lab Draw")+esc(l.test)+(l.fast?" · fasting":"")+'</div><div class="s">'+esc(rn(l.res))+" · "+esc(rr(l.res))+'</div></div><div class="end">'+labStatusBtn(l)+""+(l.status==="Ordered"?'<button class="btn small" type="button" data-lab="'+l.id+'">Mark Drawn</button>':"")+"</div></li>";
+}
+function viewToday(){
+  var ev=todayEvents();
+  return '<div class="pagehead"><div class="grow"><h2>Today</h2><div class="sub">'+fDate(T0)+'</div></div></div>'+
+  '<div class="stack">'+
+  '<section class="panel"><ul class="rows">'+(ev.length?dayView(ev):'<li class="empty">Nothing scheduled today.</li>')+"</ul></section>"+
+  "</div>";
+
+}
+function tile(n,l,go,alert){return '<button class="tile'+(alert?" alert":"")+'" type="button" data-go="'+go+'"><span class="n tab">'+n+'</span><span class="l">'+l+"</span></button>"}
+
+/* ---------- Calendar ---------- */
+var CALF=[["Clinic","Clinic","c-clin"],["Outside","Outside Doctor","c-out"],["Labs","Labs","c-labs"],["DME","DME","c-dme"],["Podiatry","Podiatry","c-podd"],["Dermatology","Dermatology","c-dermd"]];
+function calItems(){
+  var sel=state.calSel,items=[];
+  appts.forEach(function(a){
+    if(dayDiff(a.at)<0)return;
+    var out=a.spec==="Outside",show=out?sel.Outside:(sel.Clinic||(a.spec==="Podiatry"&&sel.Podiatry)||(a.spec==="Dermatology"&&sel.Dermatology));
+    if(show)items.push({d:a.at,sort:mins(out?a.pickup:a.at),time:fTime(out?a.pickup:a.at),key:out?"Outside":"Clinic",open:"appt:"+a.id,res:a.res,extra:out?"":PROV[a.spec]+", "+a.spec});
+  });
+  if(sel.Labs)labs.forEach(function(l){if(dayDiff(l.at)<0||labDone(l))return;items.push({d:l.at,sort:-1,time:"Morning",key:isOut(l)?"OutLab":"ClinicLab",open:"lab:"+l.id,res:l.res,extra:l.test})});
+  dues.forEach(function(d){
+    if(!sel[d.cat]||scheduledFor(d))return;
+    if(d.doneAt)return;var nd=nextDue(d);if(dayDiff(nd)>30||dayDiff(nd)<0)return;
+    items.push({d:dayDiff(nd)<0?new Date(T0.getTime()-864e5):nd,over:dayDiff(nd)<0,sort:-2,time:dayDiff(nd)<0?MON[nd.getMonth()]+" "+nd.getDate():"Due",key:d.cat==="DME"?"DMEDue":d.cat==="Podiatry"?"PodDue":"DermDue",open:"due:"+d.id,res:d.res,extra:d.item});
+  });
+  return items.sort(function(x,y){return (dayDiff(x.d)-dayDiff(y.d))||(x.sort-y.sort)});
+}
+function viewCalendar(){
+  var items=calItems(),groups=[],cur=null;
+  items.forEach(function(it){var k=it.over?"over":dayDiff(it.d);if(!cur||cur.k!==k){cur={k:k,label:it.over?"Overdue":fRel(it.d)+(dayDiff(it.d)<=1?" · "+fDate(it.d):""),items:[]};groups.push(cur)}cur.items.push(it)});
+  var allOn=CALF.every(function(f){return state.calSel[f[0]]});
+  return '<div class="pagehead"><div class="grow"><h2>Calendar</h2><div class="sub">Next 30 days</div></div></div>'+
+   '<div class="fchips" role="group" aria-label="Show">'+CALF.map(function(f){return '<button type="button" class="fchip '+f[2]+'" data-calsel="'+f[0]+'" aria-pressed="'+!!state.calSel[f[0]]+'"><svg class="ck" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 6.5l2.5 2.5L10 3.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>'+f[1]+"</button>"}).join("")+
+   '<button type="button" class="linkbtn" data-calall="'+(allOn?"0":"1")+'">'+(allOn?"Clear all":"Show all")+"</button></div>"+
+   '<section class="panel"><ul class="rows">'+(groups.length?groups.map(function(g){return '<li class="dayhead'+(g.k==="over"?" over":"")+'">'+esc(g.label)+"</li>"+g.items.map(function(it){
+      return '<li class="row slim '+TAG[it.key][1]+'" data-open="'+it.open+'" tabindex="0"><div class="when tab">'+esc(it.time)+'</div><div class="one">'+tagHtml(it.key)+'<span class="who1">'+esc(rn(it.res))+" · "+esc(rr(it.res))+"</span></div></li>"}).join("")}).join(""):'<li class="empty">Pick at least one filter above.</li>')+
+   "</ul></section>";
+}
+
+/* ---------- Outside ---------- */
+function viewOutside(){
+  var list=appts.filter(function(a){return a.spec==="Outside"&&(state.outFilter==="All"||(dayDiff(a.at)>=0&&a.pstat!=="Back Home"))}).sort(function(a,b){return a.at-b.at});
+  return '<div class="pagehead"><div class="grow"><h2>Outside Appointments</h2><div class="sub">When each resident has to be there, and when homecare picks them up</div></div>'+
+   '<div class="seg" role="group" aria-label="Show">'+["Upcoming","All"].map(function(f){return '<button type="button" data-outf="'+f+'" aria-pressed="'+(state.outFilter===f)+'">'+f+"</button>"}).join("")+"</div></div>"+
+   '<section class="panel"><div class="tbl-scroll"><table><thead><tr><th>Day</th><th>Pickup</th><th>Appointment</th><th>Back by</th><th>Resident</th><th>Where</th><th>Ride</th><th>Pickup status</th></tr></thead><tbody>'+
+   (list.length?list.map(function(a){return '<tr data-open="appt:'+a.id+'" tabindex="0"><td class="tab">'+fRel(a.at)+'</td><td class="tab"><b>'+fTime(a.pickup)+'</b></td><td class="tab">'+fTime(a.at)+'</td><td class="tab">'+fTime(a.back)+'</td><td><div class="who">'+esc(rn(a.res))+'</div><div class="rm">'+esc(rr(a.res))+"</div></td><td>"+esc(a.where)+"</td><td>"+esc(a.transport)+'</td><td><span class="pill '+pickPill(a.pstat)+'">'+esc(a.pstat)+"</span></td></tr>"}).join(""):'<tr><td colspan="8" class="empty">No upcoming outside appointments.</td></tr>')+
+   "</tbody></table></div></section>";
+}
+
+/* ---------- Labs ---------- */
+function waitingPanel(){
+  var waiting=labs.filter(function(l){return l.status==="Drawn"||l.status==="Results In"||steps(l).indexOf(l.status)<0});
+  return '<section class="panel"><h3><span class="grow">Labs waiting on results</span></h3><ul class="rows">'+
+   (waiting.length?waiting.map(function(l){return '<li class="row slim '+(isOut(l)?"c-olab":"c-clab")+'" style="grid-template-columns:minmax(0,1fr) auto" data-open="lab:'+l.id+'" tabindex="0"><div><div class="t">'+esc(l.test)+'</div><div class="s"><b class="kindtxt">'+(isOut(l)?"Outside lab":"Clinic lab")+"</b> · "+esc(rn(l.res))+'</div></div><div class="end">'+labStatusBtn(l)+"</div></li>"}).join(""):'<li class="empty">No labs waiting.</li>')+"</ul></section>";
+}
+var COMMON_LABS=["A1C","Albumin","Ammonia","B12","BMP","BNP","C. diff","CBC","CBC with Diff","CMP","CRP","Culture and Sensitivity","Digoxin Level","ESR","Ferritin","Folate","Free T4","Hepatic Function Panel","INR","Iron Panel","Lipid Panel","Magnesium","Phosphorus","Potassium","PSA","PT/INR","PTT","Sodium","T3","TSH","Urinalysis","Urine Culture","Uric Acid","Vitamin D","Vancomycin Trough"];
+function labSug(grp,q){
+  var pk=grp.split("|"),have=labs.filter(function(l){return l.res===pk[0]&&String(dayDiff(l.at))===pk[1]}).map(function(l){return l.test.toLowerCase()});
+  q=(q||"").trim();var ql=q.toLowerCase();
+  var m=COMMON_LABS.filter(function(x){return have.indexOf(x.toLowerCase())<0&&(!ql||x.toLowerCase().indexOf(ql)>=0)}).slice(0,ql?8:6);
+  var exact=COMMON_LABS.some(function(x){return x.toLowerCase()===ql});
+  return m.map(function(x){return '<button type="button" class="sugbtn" data-addlab="'+esc(x)+'" data-grp="'+grp+'">+ '+esc(x)+"</button>"}).join("")+
+   (q&&!exact?'<button type="button" class="sugbtn custom" data-addlab="'+esc(q)+'" data-grp="'+grp+'">+ Add "'+esc(q)+'" as a custom lab</button>':"")+
+   (!q?'<span class="sughint">Type to search, or type any name to add a custom lab.</span>':"");
+}
+var NUMS=[
+ ["Clinic","Clinic front desk","111-111-1111","1101"],["Clinic","Clinic nurse line","111-111-1111","1102"],["Clinic","Clinic fax","111-111-1111",""],
+ ["Neighborhoods","Nittany nurses station","","1201"],["Neighborhoods","Hopewell nurses station","","1202"],["Neighborhoods","Laurel nurses station","","1203"],
+ ["Transport","Homecare dispatch","111-111-1111","1301"],["Transport","Facility bus scheduler","","1302"],
+ ["Labs","Clinic lab","","1401"],["Labs","Valley Outpatient Lab","111-111-1111",""],["Labs","Lab results fax","111-111-1111",""],
+ ["Pharmacy","Pharmacy","111-111-1111",""],["Pharmacy","Pharmacy fax","111-111-1111",""],
+ ["Outside offices","Riverbend Heart Group","111-111-1111",""],["Outside offices","Clearwater Eye Center","111-111-1111",""],["Outside offices","Summit Bone & Joint","111-111-1111",""],["Outside offices","Maple Street Dental","111-111-1111",""],
+ ["Supplies","DME supply desk","","1501"],["Facility","IT help desk","111-111-1111","1601"],["Facility","Medical records","","1602"]
+];
+var notes=[{id:"n1",t:"Ask the clinic about moving Monday podiatry visits to the afternoon.",at:new Date(T0.getTime()-36e5*20)},{id:"n2",t:"Homecare said the new van has a wheelchair lift starting next week.",at:new Date(T0.getTime()-36e5*3)}],mytodos=[];
+function viewNotes(){
+  var L=notes.slice().sort(function(a,b){return b.at-a.at});
+  return '<div class="pagehead"><div class="grow"><h2>Notes</h2><div class="sub">Just for you · tap Make To-Do to put one on the To Do list</div></div></div>'+
+   '<section class="panel" style="margin-bottom:18px"><form id="note-form" class="numform"><textarea class="notebox" id="note-new" placeholder="Write a note..." style="min-height:90px;margin-top:0"></textarea><button class="btn primary" type="submit">Save Note</button></form></section>'+
+   (L.length?'<section class="panel"><ul class="rows">'+L.map(function(n){var td=mytodos.some(function(x){return x.note===n.id&&!x.done});
+     return '<li class="row noterow"><div><div class="ntext">'+esc(n.t).replace(/\n/g,"<br>")+'</div><div class="s">'+fRel(n.at)+", "+fTime(n.at)+'</div></div><div class="end">'+(td?'<span class="pill p-ok">On To Do</span>':'<button class="btn small" type="button" data-notetodo="'+n.id+'">Make To-Do</button>')+'<button type="button" class="labx" data-noterm="'+n.id+'" aria-label="Delete note">×</button></div></li>'}).join("")+"</ul></section>":'<section class="panel"><div class="empty">No notes yet.</div></section>');
+}
+function myTodoBlock(){
+  var L=mytodos.filter(function(x){return !x.done});if(!L.length)return "";
+  return '<h3 class="sechd tgrp">My To-Dos</h3><section class="panel tcard c-fam" style="border-left-color:#8e8e93"><ul class="chk">'+L.map(function(x){return '<li><button type="button" class="chki" data-mytodo="'+x.id+'" aria-pressed="false">'+ckBox(false)+'<span class="cu"><span>'+esc(x.t)+'<span class="custtag">From Notes</span></span></span></button></li>'}).join("")+"</ul></section>";
+}
+/* ---------- Changes made on the SharePoint lists ---------- */
+function addMin(d,m){return new Date(d.getTime()+m*6e4)}
+var listChanges=[],syncSeq=0;
+function mkChanges(){
+  var a5=apptById("a5"),d2=dueById("d2"),ph=NUMS.filter(function(n){return n[1]==="Pharmacy"})[0],l2=labById("l2");
+  return [
+   {list:"Appointments",who:"Clinic nurse",ago:"2 min ago",what:rn(a5.res)+" · clinic visit time",ref:"appt:a5",from:fTime(a5.at),to:fTime(addMin(a5.at,45)),apply:function(){a5.at=addMin(a5.at,45)}},
+   {list:"Due Dates",who:"DME supply desk",ago:"10 min ago",what:rn(d2.res)+" · "+d2.item+" due date",ref:"due:d2",from:fDate(nextDue(d2)),to:fDate(new Date(nextDue(d2).getTime()+7*864e5)),apply:function(){d2.due=new Date(nextDue(d2).getTime()+7*864e5)}},
+   {list:"Numbers",who:"Front desk",ago:"1 hr ago",what:"Pharmacy · phone number",ref:"",from:ph[2],to:"111-111-2222",apply:function(){ph[2]="111-111-2222"}},
+   {list:"Labs",who:"Clinic lab",ago:"just now",what:rn(l2.res)+" · "+l2.test+" note",ref:"lab:l2",from:l2.note||"(blank)",to:"Results faxed early",apply:function(){l2.note="Results faxed early"}}
+  ];
+}
+function simEdit(){var all=mkChanges(),c=all[syncSeq%all.length];syncSeq++;c.id="c"+Date.now();c.state="new";listChanges.push(c);renderSync();toast("SharePoint list changed",c.list+" list: "+c.what+" changed by "+c.who+".",true)}
+function renderSync(){var n=listChanges.filter(function(c){return c.state==="new"}).length,r=listChanges.filter(function(c){return c.state==="review"}).length,el=document.getElementById("syncslot");if(!el)return;
+  el.innerHTML=(n||r)?'<button type="button" class="syncpill'+(n?" new":"")+'" data-syncopen><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 6.5A5 5 0 0 0 4 4.5L3 5.5M3 2.5v3h3M3 9.5a5 5 0 0 0 9 2l1-1M13 13.5v-3h-3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'+(n?n+" list change"+(n===1?"":"s"):r+" to review")+"</button>":""}
+function syncSheet(){
+  lastFocus=document.activeElement;
+  var nw=listChanges.filter(function(c){return c.state==="new"}),rv=listChanges.filter(function(c){return c.state==="review"});
+  function card(c){return '<div class="chg"><div class="chgh"><b>'+esc(c.list)+' list</b><span>'+esc(c.who)+" · "+esc(c.ago)+'</span></div><div class="chgw">'+esc(c.what)+'</div><div class="chgdiff"><span class="was">'+esc(c.from)+'</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9.5 4.5 13 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span class="now">'+esc(c.to)+"</span></div>"+
+    (c.state==="new"?'<div class="chgacts"><button class="btn" type="button" data-chgrev="'+c.id+'">Review</button><button class="btn primary" type="button" data-chgok="'+c.id+'">Confirm</button></div>':
+     '<div class="chgnote">The list has the new version. The app still shows the old one until you fix it.</div><div class="chgacts"><button class="btn" type="button" data-chgkeep="'+c.id+'">Keep app version</button><button class="btn primary" type="button" data-chgok="'+c.id+'">Use list version</button></div>')+"</div>"}
+  layer.innerHTML='<div class="drawer-bg" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="List changes"><header><h3>Changes on the SharePoint lists</h3><button class="x" type="button" data-close aria-label="Close">×</button></header><div class="body">'+
+   '<p class="chgintro">Someone edited a list directly. Confirm brings the change into the app. Review leaves it on the list and keeps the app as it was, so you can check it and fix whichever one is wrong.</p>'+
+   (nw.length?'<h4 class="tday">New</h4>'+nw.map(card).join(""):"")+(rv.length?'<h4 class="tday">To review</h4>'+rv.map(card).join(""):"")+(!nw.length&&!rv.length?'<div class="empty">Everything matches the lists.</div>':"")+
+   '</div><div class="acts"><button class="btn" type="button" data-simedit>Simulate a list edit</button></div></aside>';
+  var x=layer.querySelector(".x");if(x)x.focus();
+}
+function syncBox(ref){var c=listChanges.filter(function(c){return c.ref===ref&&c.state!=="done"})[0];if(!c)return "";
+  return '<div class="syncbox"><b>'+(c.state==="new"?"Changed on the list":"Doesn't match the list")+'</b><div>'+esc(c.what)+': the list says <b>'+esc(c.to)+'</b>, the app shows <b>'+esc(c.from)+'</b>.</div><button class="btn small" type="button" data-syncopen>Review changes</button></div>'}
+function modeSeg(){return '<div class="seg modeseg" role="group" aria-label="View">'+[["day","Today"],["cal","Full Calendar"]].map(function(x){return '<button type="button" data-tmode="'+x[0]+'" aria-pressed="'+((state.todayMode||"day")===x[0])+'">'+x[1]+"</button>"}).join("")+"</div>"}
+var ADDS=[["clinic","Clinic Appointment","c-clin"],["outside","Outside Appointment","c-out"],["lab","Lab","c-labs"],["todo","To-Do","c-fam"],["note","Note","c-fam"],["dme","DME","c-dme"],["podiatry","Podiatry","c-podd"],["dermatology","Dermatology","c-dermd"],["number","Phone Number","c-fam"]];
+function addMenu(){
+  lastFocus=document.activeElement;
+  layer.innerHTML='<div class="drawer-bg" data-close></div><aside class="drawer addsheet" role="dialog" aria-modal="true" aria-label="Add"><header><h3>Add</h3><button class="x" type="button" data-close aria-label="Close">×</button></header><div class="body"><div class="addgrid">'+ADDS.map(function(x){return '<button type="button" class="addopt '+x[2]+'" data-addwhat="'+x[0]+'"><span class="dot"></span>'+x[1]+"</button>"}).join("")+"</div></div></aside>";
+  var f=layer.querySelector(".addopt");if(f)f.focus();
+}
+function addTodoForm(){
+  layer.innerHTML='<div class="drawer-bg" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="New To-Do"><header><h3>New To-Do</h3><button class="x" type="button" data-close aria-label="Close">×</button></header><form class="body form" id="mt-form"><label for="mt-t">To-do</label><input id="mt-t" placeholder="e.g. Call pharmacy about refill" required><div style="margin-top:16px;display:flex;gap:8px"><button class="btn primary" type="submit">Add To-Do</button><button class="btn" type="button" data-close>Cancel</button></div></form></aside>';
+  document.getElementById("mt-t").focus();
+  document.getElementById("mt-form").addEventListener("submit",function(e){e.preventDefault();var v=document.getElementById("mt-t").value.trim();if(!v)return;mytodos.push({id:"m"+Date.now(),t:v,done:false});closeLayer();toast("Added to To Do",v);render()});
+}
+function viewInfo(){
+  var q=(state.infoQ||"").toLowerCase(),L=NUMS.map(function(n,i){return {n:n,i:i}}).filter(function(x){return !q||(x.n.join(" ")).toLowerCase().indexOf(q)>=0}),cats=[];
+  L.forEach(function(x){if(cats.indexOf(x.n[0])<0)cats.push(x.n[0])});
+  return '<div class="pagehead"><div class="grow"><h2>Information</h2><div class="sub">Important numbers and extensions · placeholders</div></div></div>'+
+   '<input class="fldin infosearch" id="info-q" type="search" placeholder="Search names, numbers or extensions" value="'+esc(state.infoQ||"")+'" autocomplete="off">'+
+   '<div id="info-list">'+(cats.length?cats.map(function(c){return '<h3 class="sechd tgrp">'+esc(c)+'</h3><section class="panel"><ul class="rows">'+L.filter(function(x){return x.n[0]===c}).map(function(x){var n=x.n;
+     return '<li class="row infrow"><div><div class="who1">'+esc(n[1])+(n[4]?'<span class="custtag">Custom</span>':"")+'</div>'+(n[3]&&n[2]?'<div class="s">Ext. '+esc(n[3])+"</div>":"")+'</div><div class="end">'+(n[2]?'<a class="callbtn tab" href="tel:'+esc(n[2].replace(/\D/g,""))+'">'+esc(n[2])+"</a>":'<span class="callbtn tab">x'+esc(n[3])+"</span>")+"</div></li>"}).join("")+"</ul></section>"}).join(""):'<section class="panel"><div class="empty">No match. Add it below.</div></section>')+"</div>"+
+   '<h3 class="sechd tgrp">Add a number</h3><section class="panel"><form id="num-form" class="numform"><input class="fldin" id="nf-name" placeholder="Name, e.g. Hospice nurse" required><div class="two"><input class="fldin" id="nf-num" placeholder="Phone or fax number" inputmode="tel"><input class="fldin" id="nf-ext" placeholder="Ext." inputmode="numeric"></div><input class="fldin" id="nf-cat" placeholder="Group, e.g. Outside offices" list="nf-cats"><datalist id="nf-cats">'+NUMS.map(function(n){return n[0]}).filter(function(c,i,a){return a.indexOf(c)===i}).map(function(c){return '<option value="'+esc(c)+'">'}).join("")+'</datalist><button class="btn primary" type="submit">Add Number</button></form></section>';
+}
+function labDays(){
+  var t=state.labType||"All Labs",m={},out=[];
+  labs.filter(function(l){return t==="All Labs"||(t==="Outside Labs")===isOut(l)}).forEach(function(l){var k=l.res+"|"+dayDiff(l.at);if(!m[k]){m[k]={k:k,res:l.res,dd:dayDiff(l.at),at:l.at,items:[]};out.push(m[k])}m[k].items.push(l)});
+  return out;
+}
+function viewLabs(){
+  var ts=["All Labs","Clinic Labs","Outside Labs"],G=labDays();
+  var sec=[["Today",function(g){return g.dd===0}],["Coming Up",function(g){return g.dd>0}],["Earlier",function(g){return g.dd<0}]];
+  return '<div class="pagehead"><div class="grow"><h2>Labs</h2><div class="sub">One row per resident per draw day</div></div>'+
+   '<div class="seg" role="group" aria-label="Lab type">'+ts.map(function(t){return '<button type="button" data-labt="'+t+'" aria-pressed="'+((state.labType||"All Labs")===t)+'">'+t+"</button>"}).join("")+"</div></div>"+
+   sec.map(function(sx){var gs=G.filter(sx[1]).sort(function(a,b){return sx[0]==="Earlier"?b.dd-a.dd:a.dd-b.dd});if(!gs.length)return "";
+    var days=[],cur=null;gs.forEach(function(g){if(!cur||cur.dd!==g.dd){cur={dd:g.dd,gs:[]};days.push(cur)}cur.gs.push(g)});
+    return '<h3 class="sechd tgrp">'+sx[0]+"</h3>"+days.map(function(d){return (sx[0]==="Today"?"":'<h4 class="tday">'+esc(fRel(d.gs[0].at))+(Math.abs(d.dd)>1?"":" · "+esc(fDate(d.gs[0].at)))+"</h4>")+
+     '<section class="panel" style="margin-bottom:12px"><ul class="rows">'+d.gs.map(function(g){var o=g.items.some(isOut),c=g.items.some(function(l){return !isOut(l)});
+      return '<li class="row slim labrow '+(o&&!c?"c-olab":"c-clab")+'" data-open="labday:'+g.k+'" tabindex="0"><div class="one"><span class="who1">'+esc(rn(g.res))+" · "+esc(rr(g.res))+'</span></div><div class="end">'+(c?tagHtml("ClinicLab"):"")+(o?tagHtml("OutLab"):"")+'<span class="cnt tab">'+g.items.length+" lab"+(g.items.length===1?"":"s")+'</span></div></li>'}).join("")+"</ul></section>"}).join("")}).join("");
+}
+
+/* ---------- Due dates ---------- */
+function viewDues(){
+  var cats=["All","DME","Podiatry","Dermatology"];
+  var list=dues.filter(function(d){return state.dueCat==="All"||d.cat===state.dueCat}).map(function(d){return {d:d,s:dueState(d)}}).sort(function(a,b){return a.s.rank-b.s.rank||nextDue(a.d)-nextDue(b.d)});
+  return '<div class="pagehead"><div class="grow"><h2>Due Dates</h2><div class="sub">DME, podiatry and dermatology</div></div>'+
+   '<div class="seg" role="group" aria-label="Category">'+cats.map(function(c){return '<button type="button" data-cat="'+c+'" aria-pressed="'+(state.dueCat===c)+'">'+c+"</button>"}).join("")+"</div></div>"+
+   '<section class="panel"><div class="tbl-scroll"><table><thead><tr><th>Status</th><th>Resident</th><th>Type</th><th>Item</th><th>Last done</th><th>Every</th><th>Next due</th><th></th></tr></thead><tbody>'+
+   list.map(function(x){var d=x.d,can=CAT[d.cat]&&x.s.rank!==3;return '<tr data-open="due:'+d.id+'" tabindex="0"><td><span class="pill '+x.s.p+'">'+esc(x.s.label)+'</span></td><td><div class="who">'+esc(rn(d.res))+'</div><div class="rm">'+esc(rr(d.res))+"</div></td><td>"+d.cat+"</td><td>"+esc(d.item)+'</td><td class="tab">'+fDate(d.last)+'</td><td class="tab">'+everyText(d.every)+'</td><td class="tab"><b>'+fDate(nextDue(d))+'</b></td><td style="white-space:nowrap">'+(can?'<button class="btn small" type="button" data-sched="'+d.id+'">Schedule</button> ':"")+'<button class="btn small" type="button" data-done="'+d.id+'">Mark Done</button></td></tr>'}).join("")+
+   "</tbody></table></div></section>";
+}
+var TRK={"DME":{c:"c-dme",sub:"Equipment and supplies, each with its own due date"},"Podiatry":{c:"c-podd",sub:"Routine foot care, every 60 days"},"Dermatology":{c:"c-dermd",sub:"Skin checks"}};
+function viewTracker(cat){
+  var t=TRK[cat],list=dues.filter(function(d){return d.cat===cat}).map(function(d){return {d:d,s:dueState(d)}}).sort(function(a,b){return a.s.rank-b.s.rank||nextDue(a.d)-nextDue(b.d)});
+  var G=[[0,"Overdue"],[1,"Due This Week"],[2,"Due This Month"],[3,"Scheduled"],[4,cat==="DME"?"Later":"Up To Date"],[5,"Done"]];
+  var top=list.filter(function(x){return x.s.rank<=1}).length;
+  return '<div class="seg trkseg" role="group" aria-label="Tracker">'+[["dme","DME"],["podiatry","Podiatry"],["dermatology","Dermatology"]].map(function(x){return '<button type="button" data-trkseg="'+x[0]+'" aria-pressed="'+(state.view===x[0])+'">'+x[1]+"</button>"}).join("")+'</div><div class="pagehead"><div class="grow"><h2>'+cat+'</h2><div class="sub">'+t.sub+(top?" · "+top+" need attention":"")+'</div></div></div>'+
+   G.map(function(g){var xs=list.filter(function(x){return x.s.rank===g[0]});if(!xs.length)return"";
+    return '<section class="panel trk" style="margin-bottom:22px"><h3><span class="grow">'+g[1]+'</span><span class="cnt">'+xs.length+'</span></h3><ul class="rows">'+xs.map(function(x){var d=x.d,nd=nextDue(d),sc=scheduledFor(d),can=CAT[d.cat]&&!sc;
+      return '<li class="row slim trow '+t.c+(g[0]>=3?" dim":"")+'" data-open="due:'+d.id+'" tabindex="0"><div class="when tab">'+(sc?fDate(sc.at).replace(/^\w+ /,""):MON[nd.getMonth()]+" "+nd.getDate())+'<small>'+(sc?"visit":"due")+'</small></div><div class="mid"><div class="who1">'+esc(rn(d.res))+' · '+esc(rr(d.res))+'</div><div class="s">'+esc(d.item)+(d.every?" · every "+everyText(d.every).toLowerCase():"")+" · "+chkCount(d,d.cat==="DME"?DCHK:CHK)+'</div></div><div class="end"><span class="pill '+x.s.p+'">'+esc(x.s.label)+'</span>'+(g[0]<=2?(can?'<button class="btn small" type="button" data-sched="'+d.id+'">Schedule</button>':"")+'<button class="btn small" type="button" data-done="'+d.id+'">Mark Done</button>':"")+"</div></li>"}).join("")+"</ul></section>"}).join("");
+}
+var CHK=["Chart Retrieved","Orders Faxed"],OCHK=["Doctor paperwork signed by PCP","Faxed to pharmacy"],DCHK=["SLUMS Distributed"];
+function isoD(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function chkCount(o,L){var n=L.filter(function(c){return o.tasks&&o.tasks[c]}).length;return n+" of "+L.length+" tasks done"}
+function ckBox(on){return '<span class="box">'+(on?'<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.3l2.3 2.3L9.6 3.6" fill="none" stroke="currentColor" stroke-width="2"/></svg>':"")+"</span>"}
+function cuDone(c){return c.subs&&c.subs.length?c.subs.every(function(x){return x.done}):!!c.done}
+function todoTotals(o,L){o.tasks=o.tasks||{};o.custom=o.custom||[];var t=L.length+o.custom.length,n=L.filter(function(c){return o.tasks[c]}).length+o.custom.filter(cuDone).length;return {n:n,t:t}}
+function chkCount(o,L){var x=todoTotals(o,L);return x.n+" of "+x.t+" tasks done"}
+function checkItems(a,L,ref){
+  var sd=!!(state.showDone||{})[ref],nd=L.filter(function(c){return a.tasks[c]}).length+a.custom.reduce(function(n,c){return n+(cuDone(c)?1:(c.subs||[]).filter(function(x){return x.done}).length)},0);
+  return '<ul class="chk">'+L.map(function(c){var on=!!a.tasks[c];if(on&&!sd)return "";
+    return '<li><button type="button" class="chki" data-chk="'+ref+'" data-val="'+esc(c)+'" aria-pressed="'+on+'">'+ckBox(on)+esc(c)+"</button></li>"}).join("")+
+   a.custom.map(function(c,i){var on=cuDone(c);if(on&&!sd)return "";
+    return '<li><button type="button" class="chki" data-chk="'+ref+'" data-val="c:'+i+'" aria-pressed="'+on+'">'+ckBox(on)+'<span class="cu"><span>'+esc(c.t)+'<span class="custtag">Custom</span></span>'+(c.note?'<span class="cunote">'+esc(c.note)+"</span>":"")+"</span></button>"+
+     (c.subs&&c.subs.length?'<ul class="subs">'+c.subs.map(function(x,j){if(x.done&&!sd)return "";return '<li><button type="button" class="chki sub" data-chk="'+ref+'" data-val="s:'+i+':'+j+'" aria-pressed="'+!!x.done+'">'+ckBox(!!x.done)+esc(x.t)+"</button></li>"}).join("")+"</ul>":"")+"</li>"}).join("")+
+   (state.addTodo===ref?'<li class="addform"><form data-todoform="'+ref+'"><input id="td-t" maxlength="60" placeholder="To-do, e.g. Call the family" required><textarea id="td-n" placeholder="Note (optional)"></textarea><textarea id="td-s" placeholder="Steps, one per line (optional)&#10;e.g. Call daughter&#10;Leave voicemail"></textarea><div class="two"><button class="btn" type="button" data-addtodo="">Cancel</button><button class="btn primary" type="submit">Add To-Do</button></div></form></li>':
+    '<li><button type="button" class="chki addbtn" data-addtodo="'+ref+'"><span class="plus1">+</span>Add custom to-do</button></li>')+
+   (nd?'<li><button type="button" class="donetog" data-showdone="'+ref+'">'+(sd?"Hide completed":"Show "+nd+" completed")+"</button></li>":"")+"</ul>";
+}
+function apptChk(a){return a.spec==="Outside"?OCHK:CHK}
+function checklist(a,L,ref){
+  L=L||apptChk(a);ref=ref||"appt:"+a.id;var x=todoTotals(a,L);
+  return '<div class="fld"><div class="k">To-do · '+x.n+" of "+x.t+' done</div>'+checkItems(a,L,ref)+"</div>";
+}
+/* ---------- To Do ---------- */
+function todoAppts(){return appts.filter(function(a){if(dayDiff(a.at)>0)return false;var x=todoTotals(a,apptChk(a));return x.n<x.t}).sort(function(a,b){return a.at-b.at})}
+function todoCard(a){var o=a.spec==="Outside",CL=apptChk(a),x=todoTotals(a,CL),ex=!!(state.todoOpen||{})[a.id];
+  return '<section class="panel tcard '+(o?"c-out":"c-clin")+(ex?" open":"")+'"><button type="button" class="thead" data-todoexp="'+a.id+'" aria-expanded="'+ex+'"><span class="tw tab">'+fTime(a.at)+'</span><span class="tt">'+(o?esc(outTitle(a)):"Clinic Appointment with "+esc(docFor(a)))+'</span><span class="tr">'+esc(rn(a.res))+" · "+esc(rr(a.res))+'</span><span class="tp tab"><span class="ring" style="--p:'+Math.round(100*x.n/x.t)+'"></span>'+x.n+"/"+x.t+'<svg class="tchev" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 4l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></span></button>'+(ex?checkItems(a,CL,"appt:"+a.id)+'<button type="button" class="tdetails" data-open="appt:'+a.id+'">Open appointment details</button>':"")+"</section>"}
+function byDay(L){var g=[],cur=null;L.forEach(function(a){var k=dayDiff(a.at);if(!cur||cur.k!==k){cur={k:k,items:[]};g.push(cur)}cur.items.push(a)});return g}
+function viewTodo(){
+  var L=todoAppts(),past=L.filter(function(a){return dayDiff(a.at)<0}),today=L.filter(function(a){return dayDiff(a.at)===0}),fut=L.filter(function(a){return dayDiff(a.at)>0});
+  var upOpen=!!state.todoUp;
+  function days(list){return byDay(list).map(function(g){return '<h4 class="tday">'+esc(fRel(g.items[0].at))+(Math.abs(g.k)>1?"":" · "+esc(fDate(g.items[0].at)))+"</h4>"+g.items.map(todoCard).join("")}).join("")}
+  return '<div class="pagehead"><div class="grow"><h2>To Do</h2></div></div>'+
+   (past.length?'<h3 class="sechd tgrp">Past Due</h3>'+days(past):"")+
+   myTodoBlock()+'<h3 class="sechd tgrp">Today</h3>'+(today.length?today.map(todoCard).join(""):'<section class="panel"><div class="empty">Nothing left to do today.</div></section>')+
+   "";
+}
+function everyText(n){return n%365===0?(n/365===1?"Year":(n/365)+" years"):n%30===0?(n/30===1?"Month":(n/30)+" months"):n+" days"}
+
+/* ---------- How it works ---------- */
+function viewHow(){
+  return '<div class="pagehead"><div class="grow"><h2>How It Works</h2><div class="sub">Built on SharePoint lists</div></div></div>'+
+  '<section class="panel" style="margin-bottom:16px"><h3>Roll-out</h3><div class="road">'+
+   '<div class="now"><b>1. Pitch</b><p>This mock-up with made-up names, to agree on what to track.</p></div>'+
+   '<div><b>2. PC version</b><p>A Helper-style app on the HIA\'s work PC that reads the sheets she already keeps.</p></div>'+
+   '<div><b>3. SharePoint</b><p>Once IT approves: these lists on a team site, with the Lists app on a work phone.</p></div>'+
+  "</div></section>"+
+  '<div class="how">'+
+   hp("Appointments list",[["Resident","from the roster"],["Visit Type","Physician, Nurse Practitioner, Podiatry, Dermatology, Outside"],["Date and Time",""],["Where",""],["Labs","links to the Labs list"],["Doctor","clinic visits: filled from the clinic schedule, can be changed"],["Checklist","clinic: Chart Retrieved, Orders Faxed; outside: Doctor paperwork signed by PCP, Faxed to pharmacy (Yes/No columns)"],["Ride","Homecare, Family, Facility Bus"],["Pickup Time and Back By","outside visits only"],["Status","Scheduled, Seen, Cancelled"]])+
+   hp("Labs list",[["Lab Type","Clinic Lab or Outside Lab"],["Fax To and Fax Number","outside labs only"],["Resident",""],["Test",""],["Draw Date","drawn in the morning"],["Fasting","Yes or No"],["Ordered By",""],["For Visit","links to Appointments"],["Status","Ordered, Drawn, Results In, then Sent To Provider (clinic) or Faxed (outside), or a custom status"],["Notes","free text"]])+
+   hp("Due Dates list",[["Resident",""],["Type","DME, Podiatry, Dermatology"],["Item",""],["Due Date","DME: typed in for each item"],["Last Done and Repeats Every","Podiatry and Dermatology; Next Due calculated by SharePoint"],["SLUMS Distributed","DME to-do, Yes or No"]])+
+   hp("Automatic flows",[["6:00 AM","\"Your day\" email with today's list"],["Monday reminder","anything due in the next 14 days"],["Lab follow-up","flag labs Drawn for 3 days with no results"],["Visit request","nurses fill a Form, it lands on the calendar"]])+
+   hp("If the app is down",[["Every tap saves to a SharePoint list","status changes, notes, new appointments"],["Edits made on a list","show up in the app as a change to Confirm (bring it in) or Review (leave it on the list, keep the app as is, fix later)"],["The lists still work on their own","staff can open them in SharePoint or the Lists app and keep going by hand"]])+
+   hp("Reminders",[["15 minutes before","a push alert to the HIA's work phone for each clinic visit and pickup"],["How","Power Automate checks the list every 5 minutes and sends a Teams or Outlook notification"]])+
+   hp("Numbers list",[["Group, Name, Phone, Extension",""],["Custom numbers","anyone can add one from the Information tab"]])+
+   hp("Notes and My To-Dos lists",[["Notes","private notes, one row each"],["Make To-Do","copies a note onto the To Do list"]])+
+   hp("Who sees what",[["HIA","everything, edits everything"],["Nurses","request visits, see their neighborhood"],["Homecare drivers","only their pickups"],["Providers","their own day (optional)"]])+
+  "</div>"+
+  '<section class="panel" style="margin-top:16px"><h3>Ground rules</h3><div class="rules">'+
+   ['Inside Microsoft 365 only','Work phones only','No AI features','Built with SharePoint Lists and Power Automate','Practice data until IT approves'].map(function(r){return '<span class="pill p-brand">'+r+"</span>"}).join("")+
+  "</div></section>";
+}
+function hp(t,items){return '<section class="panel"><h3>'+t+"</h3><ul>"+items.map(function(i){return "<li><b>"+esc(i[0])+"</b>"+(i[1]?" <span>"+esc(i[1])+"</span>":"")+"</li>"}).join("")+"</ul></section>"}
+
+/* ---------- Drawer ---------- */
+var layer=document.getElementById("layer");
+function closeLayer(){layer.innerHTML="";if(lastFocus&&lastFocus.focus)lastFocus.focus()}
+var lastFocus=null;
+function fld(k,v){return '<div class="fld"><div class="k">'+k+'</div><div class="v">'+v+"</div></div>"}
+function openDrawer(kind,id){
+  lastFocus=document.activeElement;
+  var title="",titleHtml="",body="",acts="";
+  if(kind==="appt"){
+    var a=apptById(id);title=a.spec==="Outside"?outTitle(a):"Clinic Appointment with "+docFor(a);
+    if(a.spec==="Outside")titleHtml='<span class="tsub">Outside Appointment</span><textarea class="titlein" id="out-title" rows="2" maxlength="80" data-apptid="'+a.id+'" aria-label="Title">'+esc(outTitle(a))+'</textarea><span class="dochint">'+(a.title?'Custom title · <button type="button" class="linkbtn" data-resettitle="'+a.id+'">Use default</button>':"Default: provider and appointment type. Tap to change.")+"</span>";
+    if(a.spec!=="Outside")titleHtml='<span class="tsub">Clinic Appointment with</span><select class="docsel" id="doc-sel" data-apptid="'+a.id+'" aria-label="Doctor">'+DOCS.map(function(x){return '<option'+(docFor(a)===x?" selected":"")+">"+x+"</option>"}).join("")+'</select><span class="dochint">'+(a.doc?"Changed by hand":"Filled in from the clinic schedule")+"</span>";
+    body=fld("Resident",esc(rn(a.res))+" · "+esc(rr(a.res)))+fld("When",fRel(a.at)+", "+fTime(a.at))+(a.spec==="Outside"?fld("Appointment type",'<input class="fldin" id="out-atype" data-apptid="'+a.id+'" value="'+esc(a.atype||"")+'" placeholder="e.g. Cardiology follow-up">')+fld("Provider",'<input class="fldin" id="out-prov" data-apptid="'+a.id+'" value="'+esc(a.prov||"")+'" placeholder="Doctor or office">')+fld("Where",esc(a.where)):"");
+    if(a.spec==="Outside"){
+      body+=fld("Ride",esc(a.transport))+fld("Pickup",fTime(a.pickup))+fld("Back by",fTime(a.back))+checklist(a);
+      if(a.status!=="Seen")acts+='<button class="btn primary" type="button" data-seen="'+a.id+'">Mark Seen</button>';
+    } else {
+      body+=checklist(a);
+      if(a.status!=="Seen")acts+='<button class="btn primary" type="button" data-seen="'+a.id+'">Mark Seen</button>';
+    }
+    if(a.note)body+=fld("Note",esc(a.note));
+  } else if(kind==="labday"){
+    var pk=id.split("|"),ls=labs.filter(function(l){return l.res===pk[0]&&String(dayDiff(l.at))===pk[1]});
+    title="Labs · "+rn(pk[0]);
+    body=fld("Resident",esc(rn(pk[0]))+" · "+esc(rr(pk[0])))+fld("Draw day",fRel(ls[0].at)+" morning")+fld("Fasting",ls.some(function(l){return l.fast})?"Yes":"No")+
+      '<div class="fld"><div class="k">'+ls.length+' labs ordered · tap one for details</div><ul class="chk">'+ls.map(function(l){return '<li><button type="button" class="chki labi" data-open="lab:'+l.id+'"><span class="grow">'+esc(l.test)+'<span class="cunote" style="font-style:normal">'+esc(l.by)+(isOut(l)?" · fax "+esc(l.fax):"")+"</span></span>"+labTag(l)+'</button><button type="button" class="labx" data-labrm="'+l.id+'" data-grp="'+id+'" aria-label="Remove '+esc(l.test)+'">×</button></li>'}).join("")+"</ul></div>"+
+      '<div class="fld"><div class="k">Add a lab</div><input class="fldin" id="lab-search" data-grp="'+id+'" placeholder="Search common labs, e.g. CBC" autocomplete="off"><div id="labsug" class="labsug">'+labSug(id,"")+"</div></div>";
+  } else if(kind==="lab"){
+    var l=labById(id);title=(isOut(l)?"Outside lab · ":"Clinic lab · ")+l.test;var nx=nextLab(l);
+    body=fld("Resident",esc(rn(l.res))+" · "+esc(rr(l.res)))+fld("Draw",fRel(l.at)+" morning")+fld("Fasting",l.fast?"Yes":"No")+fld("Type",labTag(l))+fld("Ordered by",esc(l.by))+(isOut(l)?fld("Fax results to",esc(l.fax)+'<div class="tab" style="font-size:16px;font-weight:700;margin-top:2px">'+esc(l.faxNo)+"</div>"):fld("Results go to","Clinic"))+fld("For visit",l.visit?'<button class="btn small" type="button" data-open="appt:'+l.visit+'">'+esc(fRel(apptById(l.visit).at)+" "+fTime(apptById(l.visit).at))+"</button>":"None")+
+      fld("Status",labStatusBtn(l))+fld("Notes",'<textarea class="notebox" id="lab-note" data-noteid="'+l.id+'" placeholder="Anything odd about this lab: redraw needed, office called, results lost...">'+esc(l.note||"")+'</textarea>');
+    if(nx)acts+='<button class="btn primary" type="button" data-lab="'+l.id+'">Mark '+nx+"</button>";
+  } else {
+    var d=dueById(id),s=dueState(d);title=d.cat+" · "+d.item;
+    if(d.cat!=="DME"){var dd0=dueDoc(d),sc0=scheduledFor(d);title=d.cat+" with "+dd0;
+      titleHtml='<span class="tsub">'+d.cat+' with</span><select class="docsel" id="due-doc" data-dueid="'+d.id+'" aria-label="Doctor">'+DOCS.map(function(x){return '<option'+(dd0===x?" selected":"")+">"+x+"</option>"}).join("")+'</select><span class="dochint">'+(d.doc?"Changed by hand":"Filled in from the clinic schedule")+"</span>";
+      body=fld("Resident",esc(rn(d.res))+" · "+esc(rr(d.res)))+fld(sc0?"When":"Due",sc0?fRel(sc0.at)+", "+fTime(sc0.at):fDate(nextDue(d))+' <span class="dochint" style="display:inline">· '+esc(s.label)+"</span>")+fld("Last done",fDate(d.last)+' <span class="dochint" style="display:inline">· every '+everyText(d.every).toLowerCase()+"</span>")+checklist(d,CHK,"due:"+d.id);
+    } else
+    body=fld("Resident",esc(rn(d.res))+" · "+esc(rr(d.res)))+fld("Status",'<span class="pill '+s.p+'">'+esc(s.label)+"</span>")+(d.cat==="DME"?fld("Due date",'<input type="date" class="datein" id="due-date" data-dueid="'+d.id+'" value="'+isoD(d.due)+'">')+checklist(d,DCHK,"due:"+d.id):fld("Last done",fDate(d.last))+fld("Repeats every",everyText(d.every))+fld("Next due",fDate(nextDue(d))));
+    if(CAT[d.cat]&&s.rank!==3)acts+='<button class="btn primary" type="button" data-sched="'+d.id+'">Schedule</button>';
+    if(!d.doneAt)acts+='<button class="btn" type="button" data-done="'+d.id+'">Mark Done Today</button>';
+  }
+  body=syncBox(kind+":"+id)+body;
+  layer.innerHTML='<div class="drawer-bg" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><header><h3'+(titleHtml?' class="doch"':"")+'>'+(titleHtml||esc(title))+'</h3><button class="x" type="button" data-close aria-label="Close">×</button></header><div class="body">'+body+"</div>"+(acts?'<div class="acts">'+acts+"</div>":"")+"</aside>";
+  var x=layer.querySelector(".x");if(x)x.focus();
+}
+
+/* ---------- New item form ---------- */
+function openForm(preset){
+  lastFocus=document.activeElement;preset=preset||{};
+  var resOpts=Object.keys(R).map(function(k){return '<option value="'+k+'"'+(preset.res===k?" selected":"")+">"+esc(rn(k))+" · "+esc(rr(k))+"</option>"}).join("");
+  var types=["Physician","Nurse Practitioner","Podiatry","Dermatology","Outside"];
+  var tomorrow=D(preset.day==null?1:preset.day);var iso=tomorrow.getFullYear()+"-"+String(tomorrow.getMonth()+1).padStart(2,"0")+"-"+String(tomorrow.getDate()).padStart(2,"0");
+  layer.innerHTML='<div class="drawer-bg" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="New item"><header><h3>New</h3><button class="x" type="button" data-close aria-label="Close">×</button></header>'+
+  '<form class="body form" id="nf"><div class="seg" role="group" aria-label="What to add" id="nfKind">'+["Appointment","Lab","Due Date"].map(function(k,i){return '<button type="button" data-kind="'+k+'" aria-pressed="'+((preset.kind||"Appointment")===k)+'">'+k+"</button>"}).join("")+"</div>"+
+  '<label for="f-res">Resident</label><select id="f-res">'+resOpts+"</select>"+
+  '<div data-for="Appointment"><label for="f-type">Visit type</label><select id="f-type">'+types.map(function(t){return "<option"+(preset.type===t?" selected":"")+">"+t+"</option>"}).join("")+'</select>'+
+   '<div class="two"><div><label for="f-date">Date</label><input id="f-date" type="date" value="'+iso+'"></div><div><label for="f-time">Time</label><input id="f-time" type="time" value="10:00"></div></div>'+
+   '<div id="f-out" hidden><label for="f-where">Where</label><input id="f-where" value="Outside office"><div class="two"><div><label for="f-pick">Homecare pickup</label><input id="f-pick" type="time" value="09:15"></div><div><label for="f-back">Back by</label><input id="f-back" type="time" value="11:30"></div></div><div class="hint">The driver\'s "On The Way" tap sends the alert to the HIA\'s phone.</div></div></div>'+
+  '<div data-for="Lab" hidden><label for="f-src">Lab type</label><select id="f-src"><option>Clinic Lab</option><option>Outside Lab</option></select><div id="f-faxbox" hidden><label for="f-faxto">Fax results to</label><input id="f-faxto" value="Outside doctor\'s office"><label for="f-faxno">Fax number</label><input id="f-faxno" value="111-111-1111"></div><label for="f-test">Test</label><select id="f-test"><option>CBC</option><option>BMP</option><option>CMP</option><option>A1C</option><option>Lipid Panel</option><option>TSH</option><option>INR</option><option>Urinalysis</option></select><div class="two"><div><label for="f-ldate">Draw date (morning)</label><input id="f-ldate" type="date" value="'+iso+'"></div><div><label for="f-fast">Fasting</label><select id="f-fast"><option>No</option><option>Yes</option></select></div></div></div>'+
+  '<div data-for="Due Date" hidden><label for="f-cat">Type</label><select id="f-cat">'+["DME","Podiatry","Dermatology"].map(function(c){return "<option"+(preset.cat===c?" selected":"")+">"+c+"</option>"}).join("")+'</select><label for="f-item">Item</label><input id="f-item" value="'+(preset.cat==="DME"?"":preset.cat==="Dermatology"?"Skin check":"Routine foot care")+'" placeholder="e.g. Wheelchair cushion"><div id="f-dmedue"'+(preset.cat==="DME"?"":" hidden")+'><label for="f-due">Due date</label><input id="f-due" type="date" value="'+iso+'"></div><div class="two" id="f-rep"'+(preset.cat==="DME"?" hidden":"")+'><div><label for="f-last">Last done</label><input id="f-last" type="date" value="'+iso+'"></div><div><label for="f-every">Repeats every</label><select id="f-every"><option value="30">Month</option><option value="60" selected>2 months</option><option value="90">3 months</option><option value="180">6 months</option><option value="365">Year</option></select></div></div></div>'+
+  '<div style="margin-top:16px;display:flex;gap:8px"><button class="btn primary" type="submit">Save</button><button class="btn" type="button" data-close>Cancel</button></div></form></aside>';
+  var kind=preset.kind||"Appointment";
+  var nf=document.getElementById("nf");
+  nf.querySelectorAll("[data-for]").forEach(function(s){s.hidden=s.dataset.for!==kind});
+  if(preset.kind){document.getElementById("nfKind").style.display="none";layer.querySelector("header h3").textContent="New "+(preset.label||kind)}
+  document.getElementById("f-cat").addEventListener("change",function(){var d=this.value==="DME";document.getElementById("f-dmedue").hidden=!d;document.getElementById("f-rep").hidden=d});
+  function syncOut(){document.getElementById("f-out").hidden=document.getElementById("f-type").value!=="Outside"}
+  syncOut();document.getElementById("f-type").addEventListener("change",syncOut);
+  document.getElementById("f-src").addEventListener("change",function(){document.getElementById("f-faxbox").hidden=this.value!=="Outside Lab"});
+  document.getElementById("nfKind").addEventListener("click",function(e){var b=e.target.closest("[data-kind]");if(!b)return;kind=b.dataset.kind;
+    this.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});
+    nf.querySelectorAll("[data-for]").forEach(function(s){s.hidden=s.dataset.for!==kind})});
+  nf.addEventListener("submit",function(e){e.preventDefault();
+    var res=document.getElementById("f-res").value;
+    function at(dv,tv){var p=dv.split("-"),d=new Date(+p[0],+p[1]-1,+p[2]);if(tv){var q=tv.split(":");d.setHours(+q[0],+q[1])}return d}
+    var id="n"+Date.now();
+    if(kind==="Appointment"){
+      var t=document.getElementById("f-type").value,dv=document.getElementById("f-date").value,when=at(dv,document.getElementById("f-time").value);
+      var a={id:id,spec:t,res:res,at:when,where:t==="Outside"?document.getElementById("f-where").value:"Clinic",labs:[],status:"Scheduled",note:""};
+      if(t==="Outside"){a.transport="Homecare";a.pickup=at(dv,document.getElementById("f-pick").value);a.back=at(dv,document.getElementById("f-back").value);a.pstat="Scheduled";a.prov="Outside provider"}
+      appts.push(a);toast("Saved","Added to the calendar for "+fRel(when)+".");
+    } else if(kind==="Lab"){
+      labs.push({id:id,res:res,test:document.getElementById("f-test").value,at:at(document.getElementById("f-ldate").value,"07:30"),fast:document.getElementById("f-fast").value==="Yes",by:"Sage Linden, MD",status:"Ordered"});
+      if(document.getElementById("f-src").value==="Outside Lab"){var nl=labs[labs.length-1];nl.src="Outside";nl.by="Outside doctor";nl.fax=document.getElementById("f-faxto").value;nl.faxNo=document.getElementById("f-faxno").value}toast("Saved","Lab added.");
+    } else {
+      var cat=document.getElementById("f-cat").value;
+      if(cat==="DME")dues.push({id:id,cat:"DME",res:res,item:document.getElementById("f-item").value||"DME item",due:at(document.getElementById("f-due").value)});
+      else dues.push({id:id,cat:cat,res:res,item:document.getElementById("f-item").value,last:at(document.getElementById("f-last").value),every:+document.getElementById("f-every").value});toast("Saved","Added to the "+cat+" tracker.");
+    }
+    closeLayer();render();
+  });
+  var first=nf.querySelector("select");if(first)first.focus();
+}
+
+/* ---------- Status menu ---------- */
+var menuEl=null;
+function closeMenu(){if(menuEl){menuEl.remove();menuEl=null}}
+function openLabMenu(btn,id){
+  closeMenu();var l=labById(id),st=steps(l);
+  menuEl=document.createElement("div");menuEl.className="menu";menuEl.setAttribute("role","menu");
+  menuEl.innerHTML='<div class="mh">Set status for '+esc(l.test)+"</div>"+st.map(function(x){return '<button type="button" class="mi" role="menuitem" data-setlab="'+l.id+'" data-val="'+esc(x)+'"><span class="ck">'+(l.status===x?"✓":"")+"</span>"+esc(x)+"</button>"}).join("")+
+    '<hr><button type="button" class="mi" role="menuitem" data-customlab="'+l.id+'"><span class="ck">'+(st.indexOf(l.status)<0?"✓":"")+'</span>Custom…</button>';
+  document.body.appendChild(menuEl);
+  var r=btn.getBoundingClientRect(),w=220,h=menuEl.offsetHeight;
+  var left=Math.min(Math.max(8,r.right-w),window.innerWidth-w-8),top=r.bottom+4;
+  if(top+h>window.innerHeight-8)top=Math.max(8,r.top-h-4);
+  menuEl.style.left=left+"px";menuEl.style.top=top+"px";
+  var f=menuEl.querySelector("button.mi");if(f)f.focus();
+}
+function customForm(id){
+  var l=labById(id);
+  menuEl.innerHTML='<div class="mh">Custom status for '+esc(l.test)+'</div><form id="cust"><input id="cust-in" maxlength="40" placeholder="e.g. Redraw Needed" value="'+(steps(l).indexOf(l.status)<0?esc(l.status):"")+'"><button class="btn primary small" type="submit">Set status</button></form>';
+  var inp=document.getElementById("cust-in");inp.focus();
+  document.getElementById("cust").addEventListener("submit",function(e){e.preventDefault();var v=inp.value.trim();if(!v)return;
+    l.status=v;closeMenu();toast("Updated",l.test+" is now "+v+".");refreshAfter("lab",l.id)});
+}
+document.addEventListener("keydown",function(e){if(e.target.id==="out-title"&&e.key==="Enter"){e.preventDefault();e.target.blur()}});
+document.addEventListener("input",function(e){if(e.target.id==="lab-search"){document.getElementById("labsug").innerHTML=labSug(e.target.dataset.grp,e.target.value)}});
+document.addEventListener("keydown",function(e){if(e.target.id==="lab-search"&&e.key==="Enter"){e.preventDefault();var f=document.querySelector("#labsug .sugbtn");if(f)f.click()}});
+document.addEventListener("submit",function(e){if(e.target.id!=="note-form")return;e.preventDefault();var v=document.getElementById("note-new").value.trim();if(!v)return;notes.push({id:"n"+Date.now(),t:v,at:new Date()});toast("Saved","Note saved to your Notes list.");render()});
+document.addEventListener("submit",function(e){if(e.target.id!=="num-form")return;e.preventDefault();var g=function(x){return document.getElementById(x).value.trim()};
+  if(!g("nf-num")&&!g("nf-ext")){toast("Add a number","Enter a phone number or an extension.");return}
+  NUMS.push([g("nf-cat")||"My numbers",g("nf-name"),g("nf-num"),g("nf-ext"),1]);state.infoQ="";toast("Added",g("nf-name")+" saved to the Numbers list.");render()});
+document.addEventListener("input",function(e){if(e.target.id==="info-q"){state.infoQ=e.target.value;var v=e.target.value,pos=e.target.selectionStart;render();var i=document.getElementById("info-q");i.focus();i.setSelectionRange(pos,pos)}});
+document.addEventListener("submit",function(e){var f=e.target.closest("[data-todoform]");if(!f)return;e.preventDefault();
+  var r=f.dataset.todoform.split(":"),o=r[0]==="due"?dueById(r[1]):apptById(r[1]);o.custom=o.custom||[];
+  var subs=document.getElementById("td-s").value.split("\n").map(function(x){return x.trim()}).filter(Boolean).map(function(x){return {t:x,done:false}});
+  o.custom.push({t:document.getElementById("td-t").value.trim(),note:document.getElementById("td-n").value.trim(),done:false,subs:subs});
+  state.addTodo=null;toast("Added","Custom to-do added.");var y=window.scrollY;refreshAfter(r[0],o.id);window.scrollTo(0,y)});
+document.addEventListener("change",function(e){if(e.target.id==="due-doc"){var dq=dueById(e.target.dataset.dueid);dq.doc=e.target.value;toast("Updated","Doctor set to "+dq.doc+".");refreshAfter("due",dq.id);return}
+var oid=e.target.dataset&&e.target.dataset.apptid;
+  if(e.target.id==="out-title"||e.target.id==="out-atype"||e.target.id==="out-prov"){var oa=apptById(oid),v=e.target.value.trim();
+    if(e.target.id==="out-title")oa.title=(v&&v!==[oa.prov,oa.atype].filter(Boolean).join(" · "))?v:"";else if(e.target.id==="out-atype")oa.atype=v;else oa.prov=v;
+    toast("Saved","Saved to the Appointments list.");refreshAfter("appt",oa.id);return}if(e.target.id==="doc-sel"){var da=apptById(e.target.dataset.apptid);da.doc=e.target.value;toast("Updated","Doctor set to "+da.doc+".");refreshAfter("appt",da.id);return}if(e.target.id==="due-date"&&e.target.value){var dd=dueById(e.target.dataset.dueid),v=e.target.value.split("-");dd.due=new Date(+v[0],+v[1]-1,+v[2]);dd.doneAt=null;refreshAfter("due",dd.id);return}if(e.target.id==="demo-time"){state.demoMin=e.target.value===""?null:+e.target.value;render();checkReminders()}});
+setInterval(function(){if(state.view==="today"&&state.demoMin==null&&!layer.innerHTML&&!menuEl&&!(document.activeElement&&document.activeElement.id==="demo-time"))render();if(state.demoMin==null)checkReminders()},60000);
+document.addEventListener("input",function(e){if(e.target.id==="lab-note"){var l=labById(e.target.dataset.noteid);l.note=e.target.value;clearTimeout(noteT);noteT=setTimeout(function(){var y=window.scrollY;render();window.scrollTo(0,y)},500)}});
+var noteT=null;
+
+/* ---------- Reminders (phone-style pop-up, 15 minutes before) ---------- */
+var REMIND=15,fired={},notT=null;
+function remText(e){var a=e.a;return fTime(e.t)+" · "+(e.key==="Outside"?(a.transport==="Homecare"?"Homecare pickup":"Family pickup")+" for "+outTitle(a):"Clinic, "+PROV[a.spec])+" · "+rn(a.res)+", "+rr(a.res)}
+function showNotif(e,inMin){
+  var old=document.getElementById("notif");if(old)old.remove();
+  var b=document.createElement("button");b.type="button";b.id="notif";b.className="notif";b.setAttribute("role","status");b.dataset.open="appt:"+e.a.id;
+  b.innerHTML='<span class="ap">HT</span><span><span class="hd"><span>HIA Tracker</span><span>now</span></span><span class="tt">'+(e.key==="Outside"?"Pickup":"Appointment")+" in "+inMin+' min</span><br><span class="bd">'+esc(remText(e))+"</span></span>";
+  document.body.appendChild(b);clearTimeout(notT);notT=setTimeout(function(){b.remove()},7000);
+}
+function checkReminders(force){
+  var now=nowMin(),ev=todayEvents();
+  var due=ev.filter(function(e){var d=mins(e.t)-now;return d>0&&d<=REMIND&&!e.done});
+  if(force&&!due.length){var up=ev.filter(function(e){return mins(e.t)>now})[0]||ev[0];if(up)showNotif(up,Math.max(1,Math.min(REMIND,mins(up.t)-now)));return}
+  due.forEach(function(e){var k=e.a.id+"@"+(state.demoMin==null?"live":state.demoMin);if(force||!fired[k]){fired[k]=1;showNotif(e,mins(e.t)-now)}});
+}
+
+/* ---------- Toast ---------- */
+var tt=null;
+function toast(head,msg,phone){
+  var el=document.getElementById("toast");if(!el){el=document.createElement("div");el.id="toast";el.setAttribute("role","status");document.body.appendChild(el)}
+  el.className="toast";el.innerHTML=(phone?'<svg class="phone" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="1.5" width="8" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M7 12.5h2" stroke="currentColor" stroke-width="1.4"/></svg>':"")+"<div><b>"+esc(head)+"</b>"+esc(msg)+"</div>";
+  el.hidden=false;clearTimeout(tt);tt=setTimeout(function(){el.hidden=true},phone?4200:2400);
+}
+
+/* ---------- Actions ---------- */
+function render(){
+  renderNav();renderSync();
+  var m=document.getElementById("main");
+  m.innerHTML={today:function(){return modeSeg()+(state.todayMode==="cal"?viewCalendar():viewToday())},notes:viewNotes,info:viewInfo,todo:viewTodo,dme:function(){return viewTracker("DME")},podiatry:function(){return viewTracker("Podiatry")},dermatology:function(){return viewTracker("Dermatology")},calendar:viewCalendar,outside:viewOutside,labs:viewLabs,dues:viewDues,how:viewHow}[state.view]();
+}
+function go(v){state.view=v;if(isTrk(v)){state.lastTrk=v;state.trkOpen=true}try{localStorage.setItem("hia-view",v)}catch(e){}render();window.scrollTo(0,0)}
+
+document.addEventListener("keydown",function(e){
+  if(e.key==="Escape"&&menuEl){closeMenu();return}
+  if(e.key==="Escape"&&layer.innerHTML)closeLayer();
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches("[data-open][tabindex]")){e.preventDefault();var p=e.target.dataset.open.split(":");openDrawer(p[0],p[1])}
+});
+document.addEventListener("click",function(e){
+  if(menuEl&&!e.target.closest(".menu")&&!e.target.closest("[data-labmenu]"))closeMenu();
+  var t=e.target.closest("button,[data-open],[data-close]");if(!t)return;
+  var ds=t.dataset;
+  if(ds.testrem){checkReminders(true);return}
+  if(t.id==="notif"){t.remove();var np=ds.open.split(":");openDrawer(np[0],np[1]);return}
+  if(ds.labmenu){if(menuEl&&menuEl.dataset.for===ds.labmenu){closeMenu();return}openLabMenu(t,ds.labmenu);menuEl.dataset.for=ds.labmenu;return}
+  if(ds.setlab){var sl=labById(ds.setlab);sl.status=ds.val;closeMenu();toast(sl.status==="Faxed"?"Faxed":"Updated",sl.status==="Faxed"?sl.test+" results faxed to "+sl.fax+".":sl.test+" is now "+sl.status+".");refreshAfter("lab",sl.id);return}
+  if(ds.chk){var cp=ds.chk.split(":"),ca=cp[0]==="due"?dueById(cp[1]):apptById(cp[1]),L=cp[0]==="due"?(ca.cat==="DME"?DCHK:CHK):apptChk(ca),v=ds.val;todoTotals(ca,L);
+    var before=todoTotals(ca,L);
+    if(/^c:/.test(v)){var cu=ca.custom[+v.slice(2)];if(cu.subs&&cu.subs.length){var on=!cuDone(cu);cu.subs.forEach(function(x){x.done=on})}else cu.done=!cu.done}
+    else if(/^s:/.test(v)){var q=v.split(":");var sb=ca.custom[+q[1]].subs[+q[2]];sb.done=!sb.done}
+    else ca.tasks[v]=!ca.tasks[v];
+    var after=todoTotals(ca,L);
+    if(cp[0]==="appt"&&state.view==="todo"&&after.n===after.t&&before.n<before.t&&!layer.innerHTML)toast("All done",rn(ca.res)+"'s appointment is off the To Do list.");
+    refreshAfter(cp[0],ca.id);return}
+  if(ds.addtodo!==undefined){state.addTodo=ds.addtodo||null;var ap=(ds.addtodo||"").split(":");if(layer.innerHTML&&ap[1])refreshAfter(ap[0],ap[1]);else{var y=window.scrollY;render();if(layer.innerHTML){}window.scrollTo(0,y)}var ti=document.getElementById("td-t");if(ti)ti.focus();
+    if(!ds.addtodo){var op=layer.querySelector("[data-chk]");if(op){var r2=op.dataset.chk.split(":");refreshAfter(r2[0],r2[1])}}return}
+  if(ds.trkt!==undefined){if(window.matchMedia("(max-width:760px)").matches){go(isTrk(state.view)?state.view:(state.lastTrk||"dme"));return}if(state.trkOpen){state.trkOpen=false;renderNav()}else{state.trkOpen=true;go(isTrk(state.view)?state.view:(state.lastTrk||"dme"))}return}
+  if(ds.trkseg){go(ds.trkseg);return}
+  if(ds.todoup!==undefined){state.todoUp=!state.todoUp;var yu=window.scrollY;render();window.scrollTo(0,yu);return}
+  if(ds.showdone){state.showDone=state.showDone||{};state.showDone[ds.showdone]=!state.showDone[ds.showdone];var sp=ds.showdone.split(":");if(layer.innerHTML)refreshAfter(sp[0],sp[1]);else{var ys=window.scrollY;render();window.scrollTo(0,ys)}return}
+  if(ds.notetodo){var nn=notes.filter(function(n){return n.id===ds.notetodo})[0],tt=nn.t.split("\n")[0];if(tt.length>90)tt=tt.slice(0,88)+"…";mytodos.push({id:"m"+Date.now(),t:tt,note:nn.id,done:false});toast("Added to To Do",tt);render();return}
+  if(ds.noterm){notes=notes.filter(function(n){return n.id!==ds.noterm});render();return}
+  if(ds.mytodo){var mt=mytodos.filter(function(x){return x.id===ds.mytodo})[0];mt.done=true;toast("Done",mt.t);var ym=window.scrollY;render();window.scrollTo(0,ym);return}
+  if(ds.syncopen!==undefined){syncSheet();return}
+  if(ds.simedit!==undefined){simEdit();if(layer.innerHTML)syncSheet();return}
+  if(ds.chgok||ds.chgrev||ds.chgkeep){var cid=ds.chgok||ds.chgrev||ds.chgkeep,cc=listChanges.filter(function(c){return c.id===cid})[0];
+    if(ds.chgok){cc.apply();cc.state="done";toast("Confirmed","The app now matches the "+cc.list+" list.")}
+    else if(ds.chgrev){cc.state="review";toast("Left for review","The list keeps the change. The app keeps the old version until you decide.")}
+    else {cc.state="done";toast("Kept app version","The "+cc.list+" list is set back to "+cc.from+".")}
+    render();renderSync();syncSheet();return}
+  if(ds.tmode){state.todayMode=ds.tmode==="day"?"":"cal";render();window.scrollTo(0,0);return}
+  if(ds.addmenu!==undefined){addMenu();return}
+  if(ds.addwhat){var w=ds.addwhat;closeLayer();
+    if(w==="clinic")openForm({kind:"Appointment",type:"Physician",label:"Clinic Appointment"});
+    else if(w==="outside")openForm({kind:"Appointment",type:"Outside",label:"Outside Appointment"});
+    else if(w==="lab")openForm({kind:"Lab",label:"Lab"});
+    else if(w==="dme"||w==="podiatry"||w==="dermatology"){var cn={dme:"DME",podiatry:"Podiatry",dermatology:"Dermatology"}[w];openForm({kind:"Due Date",cat:cn,label:cn+" Item"})}
+    else if(w==="todo")addTodoForm();
+    else if(w==="note"){go("notes");var nn2=document.getElementById("note-new");if(nn2)nn2.focus()}
+    else if(w==="number"){go("info");var nf2=document.getElementById("nf-name");if(nf2){nf2.scrollIntoView({block:"center"});nf2.focus()}}
+    return}
+  if(ds.todoexp){state.todoOpen=state.todoOpen||{};state.todoOpen[ds.todoexp]=!state.todoOpen[ds.todoexp];var yy=window.scrollY;render();window.scrollTo(0,yy);return}
+  if(ds.addlab){var gk=ds.grp.split("|"),base=labs.filter(function(l){return l.res===gk[0]&&String(dayDiff(l.at))===gk[1]})[0];
+    var nl={id:"l"+Date.now(),res:base.res,test:ds.addlab,at:new Date(base.at),fast:base.fast,by:base.by,status:"Ordered"};if(base.src){nl.src=base.src;nl.fax=base.fax;nl.faxNo=base.faxNo}if(base.visit)nl.visit=base.visit;
+    labs.push(nl);toast("Added",ds.addlab+" added for "+rn(base.res)+".");refreshAfter("labday",ds.grp);var si=document.getElementById("lab-search");if(si)si.focus();return}
+  if(ds.labrm){var ri=labs.findIndex(function(l){return l.id===ds.labrm}),rl=labs[ri],left=labs.filter(function(l){return l.res===rl.res&&dayDiff(l.at)===dayDiff(rl.at)}).length;labs.splice(ri,1);toast("Removed",rl.test+" removed.");if(left>1)refreshAfter("labday",ds.grp);else{closeLayer();render()}return}
+  if(ds.resettitle){apptById(ds.resettitle).title="";refreshAfter("appt",ds.resettitle);return}
+  if(ds.customlab){customForm(ds.customlab);return}
+  if(t.closest(".menu"))return;
+  if(ds.close!==undefined){closeLayer();return}
+  if(ds.go){closeLayer();go(ds.go);return}
+  if(ds.pick){var a=apptById(ds.pick),nx=nextPickLabel(a);a.pstat=nx;if(nx==="Back Home")a.status="Seen";
+    if(nx==="On The Way")toast("Alert sent to the HIA's phone","Homecare is on the way to pick up "+rn(a.res)+" ("+rr(a.res)+") for "+fTime(a.at)+".",true);
+    else if(nx==="Back Home")toast("Back home",rn(a.res)+" is back. The outside visit is marked done.");
+    else toast("Updated","Pickup status: "+nx+".");
+    refreshAfter("appt",a.id);return}
+  if(ds.lab){var l=labById(ds.lab);l.status=nextLab(l);toast(l.status==="Faxed"?"Faxed":"Updated",l.status==="Faxed"?l.test+" results faxed to "+l.fax+".":l.test+" is now "+l.status+".");refreshAfter("lab",l.id);return}
+  if(ds.seen){var s=apptById(ds.seen);s.status="Seen";toast("Updated","Marked seen.");refreshAfter("appt",s.id);return}
+  if(ds.done){var d=dueById(ds.done);if(d.cat==="DME"){d.doneAt=new Date(T0);toast("Updated",d.item+" marked done.");refreshAfter("due",d.id);return}d.last=new Date(T0);toast("Updated",d.item+" marked done today. Next due "+fDate(nextDue(d))+".");refreshAfter("due",d.id);return}
+  if(ds.sched){var dd=dueById(ds.sched);closeLayer();openForm({res:dd.res,type:dd.cat,day:Math.max(1,dayDiff(nextDue(dd)))});return}
+  if(ds.week){state.calWeek=ds.week==="0"?0:state.calWeek+(+ds.week);render();return}
+  if(ds.calsel){state.calSel[ds.calsel]=state.calSel[ds.calsel]?0:1;render();return}
+  if(ds.calall){CALF.forEach(function(f){state.calSel[f[0]]=ds.calall==="1"?1:0});render();return}
+  if(ds.tf){state.todayFilter=ds.tf;render();return}
+  if(ds.calf){state.calFilter=ds.calf;render();return}
+  if(ds.labt){state.labType=ds.labt;render();return}
+  if(ds.labf){state.labFilter=ds.labf;render();return}
+  if(ds.cat){state.dueCat=ds.cat;render();return}
+  if(ds.outf){state.outFilter=ds.outf;render();return}
+  if(ds.open){var p=ds.open.split(":");openDrawer(p[0],p[1]);return}
+});
+function refreshAfter(kind,id){var open=!!layer.querySelector(".drawer[aria-label]:not([aria-label='New item'])");render();if(open)openDrawer(kind,id)}
+render();
+listChanges=mkChanges().slice(0,2).map(function(c,i){c.id="s"+i;c.state="new";return c});syncSeq=2;renderSync();
+})();
+</script>
+
+</body>
+</html>
