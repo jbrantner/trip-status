@@ -827,7 +827,7 @@ function cuDone(c){return c.subs&&c.subs.length?c.subs.every(function(x){return 
 function todoTotals(o,L){o.tasks=o.tasks||{};o.custom=o.custom||[];var t=L.length+o.custom.length,n=L.filter(function(c){return o.tasks[c]}).length+o.custom.filter(cuDone).length;return {n:n,t:t}}
 function chkCount(o,L){var x=todoTotals(o,L);return x.n+" of "+x.t+" tasks done"}
 function checkItems(a,L,ref){
-  var sd=!!(state.showDone||{})[ref],nd=L.filter(function(c){return a.tasks[c]}).length+a.custom.reduce(function(n,c){return n+(cuDone(c)?1:(c.subs||[]).filter(function(x){return x.done}).length)},0);
+  var sd=true,nd=L.filter(function(c){return a.tasks[c]}).length+a.custom.reduce(function(n,c){return n+(cuDone(c)?1:(c.subs||[]).filter(function(x){return x.done}).length)},0);
   return '<ul class="chk">'+L.map(function(c){var on=!!a.tasks[c];if(on&&!sd)return "";
     return '<li><button type="button" class="chki" data-chk="'+ref+'" data-val="'+esc(c)+'" aria-pressed="'+on+'">'+ckBox(on)+esc(c)+"</button></li>"}).join("")+
    a.custom.map(function(c,i){var on=cuDone(c);if(on&&!sd)return "";
@@ -835,7 +835,7 @@ function checkItems(a,L,ref){
      (c.subs&&c.subs.length?'<ul class="subs">'+c.subs.map(function(x,j){if(x.done&&!sd)return "";return '<li><button type="button" class="chki sub" data-chk="'+ref+'" data-val="s:'+i+':'+j+'" aria-pressed="'+!!x.done+'">'+ckBox(!!x.done)+esc(x.t)+"</button></li>"}).join("")+"</ul>":"")+"</li>"}).join("")+
    (state.addTodo===ref?'<li class="addform"><form data-todoform="'+ref+'"><input id="td-t" maxlength="60" placeholder="To-do, e.g. Call the family" required><textarea id="td-n" placeholder="Note (optional)"></textarea><textarea id="td-s" placeholder="Steps, one per line (optional)&#10;e.g. Call daughter&#10;Leave voicemail"></textarea><div class="two"><button class="btn" type="button" data-addtodo="">Cancel</button><button class="btn primary" type="submit">Add To-Do</button></div></form></li>':
     '<li><button type="button" class="chki addbtn" data-addtodo="'+ref+'"><span class="plus1">+</span>Add custom to-do</button></li>')+
-   (nd?'<li><button type="button" class="donetog" data-showdone="'+ref+'">'+(sd?"Hide completed":"Show "+nd+" completed")+"</button></li>":"")+"</ul>";
+"</ul>";
 }
 function apptChk(a){return a.spec==="Outside"?OCHK:CHK}
 function checklist(a,L,ref){
