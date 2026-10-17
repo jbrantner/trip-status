@@ -738,13 +738,13 @@ var listChanges=[],syncSeq=0;
 function mkChanges(){
   var a5=apptById("a5"),d2=dueById("d2"),ph=NUMS.filter(function(n){return n[1]==="Pharmacy"})[0],l2=labById("l2");
   return [
-   {list:"Appointments",who:"Clinic nurse",ago:"2 min ago",what:rn(a5.res)+" · clinic visit time",ref:"appt:a5",from:fTime(a5.at),to:fTime(addMin(a5.at,45)),apply:function(){a5.at=addMin(a5.at,45)}},
-   {list:"Due Dates",who:"DME supply desk",ago:"10 min ago",what:rn(d2.res)+" · "+d2.item+" due date",ref:"due:d2",from:fDate(nextDue(d2)),to:fDate(new Date(nextDue(d2).getTime()+7*864e5)),apply:function(){d2.due=new Date(nextDue(d2).getTime()+7*864e5)}},
-   {list:"Numbers",who:"Front desk",ago:"1 hr ago",what:"Pharmacy · phone number",ref:"",from:ph[2],to:"111-111-2222",apply:function(){ph[2]="111-111-2222"}},
-   {list:"Labs",who:"Clinic lab",ago:"just now",what:rn(l2.res)+" · "+l2.test+" note",ref:"lab:l2",from:l2.note||"(blank)",to:"Results faxed early",apply:function(){l2.note="Results faxed early"}}
+   (function(){var o=a5.at,n=addMin(o,45);return {list:"Appointments",who:"Clinic nurse",ago:"2 min ago",what:rn(a5.res)+" · clinic visit time",ref:"appt:a5",from:fTime(o),to:fTime(n),apply:function(){a5.at=n},undo:function(){a5.at=o}}})(),
+   (function(){var o=d2.due,od=nextDue(d2),n=new Date(od.getTime()+7*864e5);return {list:"Due Dates",who:"DME supply desk",ago:"10 min ago",what:rn(d2.res)+" · "+d2.item+" due date",ref:"due:d2",from:fDate(od),to:fDate(n),apply:function(){d2.due=n},undo:function(){d2.due=o}}})(),
+   (function(){var o=ph[2];return {list:"Numbers",who:"Front desk",ago:"1 hr ago",what:"Pharmacy · phone number",ref:"",from:o,to:"111-111-2222",apply:function(){ph[2]="111-111-2222"},undo:function(){ph[2]=o}}})(),
+   (function(){var o=l2.note;return {list:"Labs",who:"Clinic lab",ago:"just now",what:rn(l2.res)+" · "+l2.test+" note",ref:"lab:l2",from:o||"(blank)",to:"Results faxed early",apply:function(){l2.note="Results faxed early"},undo:function(){l2.note=o}}})()
   ];
 }
-function simEdit(){var all=mkChanges(),c=all[syncSeq%all.length];syncSeq++;c.id="c"+Date.now();c.state="new";listChanges.push(c);renderSync();toast("SharePoint list changed",c.list+" list: "+c.what+" changed by "+c.who+".",true)}
+function simEdit(){var all=mkChanges(),c=all[syncSeq%all.length];syncSeq++;c.id="c"+Date.now();c.state="new";c.apply();listChanges.push(c);render();renderSync();toast("SharePoint list changed",c.list+" list: "+c.what+" changed by "+c.who+".",true)}
 function renderSync(){var n=listChanges.filter(function(c){return c.state==="new"}).length,r=listChanges.filter(function(c){return c.state==="review"}).length,el=document.getElementById("syncslot");if(!el)return;
   el.innerHTML=(n||r)?'<button type="button" class="syncpill'+(n?" new":"")+'" data-syncopen><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 6.5A5 5 0 0 0 4 4.5L3 5.5M3 2.5v3h3M3 9.5a5 5 0 0 0 9 2l1-1M13 13.5v-3h-3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'+(n?n+" list change"+(n===1?"":"s"):r+" to review")+"</button>":""}
 function syncSheet(){
@@ -752,15 +752,15 @@ function syncSheet(){
   var nw=listChanges.filter(function(c){return c.state==="new"}),rv=listChanges.filter(function(c){return c.state==="review"});
   function card(c){return '<div class="chg"><div class="chgh"><b>'+esc(c.list)+' list</b><span>'+esc(c.who)+" · "+esc(c.ago)+'</span></div><div class="chgw">'+esc(c.what)+'</div><div class="chgdiff"><span class="was">'+esc(c.from)+'</span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9.5 4.5 13 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span class="now">'+esc(c.to)+"</span></div>"+
     (c.state==="new"?'<div class="chgacts"><button class="btn" type="button" data-chgrev="'+c.id+'">Review</button><button class="btn primary" type="button" data-chgok="'+c.id+'">Confirm</button></div>':
-     '<div class="chgnote">The list has the new version. The app still shows the old one until you fix it.</div><div class="chgacts"><button class="btn" type="button" data-chgkeep="'+c.id+'">Keep app version</button><button class="btn primary" type="button" data-chgok="'+c.id+'">Use list version</button></div>')+"</div>"}
+     '<div class="chgnote">Flagged to check. The list and the app both show the new value for now.</div><div class="chgacts"><button class="btn" type="button" data-chgkeep="'+c.id+'">Put back '+esc(c.from)+'</button><button class="btn primary" type="button" data-chgok="'+c.id+'">Looks right</button></div>')+"</div>"}
   layer.innerHTML='<div class="drawer-bg" data-close></div><aside class="drawer" role="dialog" aria-modal="true" aria-label="List changes"><header><h3>Changes on the SharePoint lists</h3><button class="x" type="button" data-close aria-label="Close">×</button></header><div class="body">'+
-   '<p class="chgintro">Someone edited a list directly. Confirm brings the change into the app. Review leaves it on the list and keeps the app as it was, so you can check it and fix whichever one is wrong.</p>'+
+   '<p class="chgintro">Someone edited a list directly. The app reads the same lists, so it already shows the change. Confirm if it looks right. Review flags it so it can be checked, and the old value can be put back. Power Automate checks for edits every 5 minutes.</p>'+
    (nw.length?'<h4 class="tday">New</h4>'+nw.map(card).join(""):"")+(rv.length?'<h4 class="tday">To review</h4>'+rv.map(card).join(""):"")+(!nw.length&&!rv.length?'<div class="empty">Everything matches the lists.</div>':"")+
    '</div><div class="acts"><button class="btn" type="button" data-simedit>Simulate a list edit</button></div></aside>';
   var x=layer.querySelector(".x");if(x)x.focus();
 }
 function syncBox(ref){var c=listChanges.filter(function(c){return c.ref===ref&&c.state!=="done"})[0];if(!c)return "";
-  return '<div class="syncbox"><b>'+(c.state==="new"?"Changed on the list":"Doesn't match the list")+'</b><div>'+esc(c.what)+': the list says <b>'+esc(c.to)+'</b>, the app shows <b>'+esc(c.from)+'</b>.</div><button class="btn small" type="button" data-syncopen>Review changes</button></div>'}
+  return '<div class="syncbox"><b>'+(c.state==="new"?"Changed on the list":"Flagged to check")+'</b><div>'+esc(c.what)+' was changed by '+esc(c.who)+' from <b>'+esc(c.from)+'</b> to <b>'+esc(c.to)+'</b>.</div><button class="btn small" type="button" data-syncopen>Review changes</button></div>'}
 function modeSeg(){return '<div class="seg modeseg" role="group" aria-label="View">'+[["day","Today"],["cal","Full Calendar"]].map(function(x){return '<button type="button" data-tmode="'+x[0]+'" aria-pressed="'+((state.todayMode||"day")===x[0])+'">'+x[1]+"</button>"}).join("")+"</div>"}
 var ADDS=[["clinic","Clinic Appointment","c-clin"],["outside","Outside Appointment","c-out"],["lab","Lab","c-labs"],["todo","To-Do","c-fam"],["note","Note","c-fam"],["dme","DME","c-dme"],["podiatry","Podiatry","c-podd"],["dermatology","Dermatology","c-dermd"],["number","Phone Number","c-fam"]];
 function addMenu(){
@@ -860,22 +860,23 @@ function everyText(n){return n%365===0?(n/365===1?"Year":(n/365)+" years"):n%30=
 
 /* ---------- How it works ---------- */
 function viewHow(){
-  return '<div class="pagehead"><div class="grow"><h2>How It Works</h2><div class="sub">Built on SharePoint lists</div></div></div>'+
+  return '<div class="pagehead"><div class="grow"><h2>How It Works</h2><div class="sub">A Power Apps app on SharePoint Lists</div></div></div>'+
   '<section class="panel" style="margin-bottom:16px"><h3>Roll-out</h3><div class="road">'+
-   '<div class="now"><b>1. Pitch</b><p>This mock-up with made-up names, to agree on what to track.</p></div>'+
-   '<div><b>2. PC version</b><p>A Helper-style app on the HIA\'s work PC that reads the sheets she already keeps.</p></div>'+
-   '<div><b>3. SharePoint</b><p>Once IT approves: these lists on a team site, with the Lists app on a work phone.</p></div>'+
+   '<div class="now"><b>1. Pitch</b><p>This mock-up with made-up names, to agree on what to track. It isn\'t connected to SharePoint.</p></div>'+
+   '<div><b>2. Build</b><p>We build it ourselves in Power Apps on these SharePoint lists, once Power Apps works in our environment and the privacy OK is in.</p></div>'+
+   '<div><b>3. Use</b><p>The HIA opens it in the Power Apps app on a work phone. The lists stay usable on their own.</p></div>'+
   "</div></section>"+
   '<div class="how">'+
-   hp("Appointments list",[["Resident","from the roster"],["Visit Type","Physician, Nurse Practitioner, Podiatry, Dermatology, Outside"],["Date and Time",""],["Where",""],["Labs","links to the Labs list"],["Doctor","clinic visits: filled from the clinic schedule, can be changed"],["Checklist","clinic: Chart Retrieved, Orders Faxed; outside: Doctor paperwork signed by PCP, Faxed to pharmacy (Yes/No columns)"],["Ride","Homecare, Family, Facility Bus"],["Pickup Time and Back By","outside visits only"],["Status","Scheduled, Seen, Cancelled"]])+
-   hp("Labs list",[["Lab Type","Clinic Lab or Outside Lab"],["Fax To and Fax Number","outside labs only"],["Resident",""],["Test",""],["Draw Date","drawn in the morning"],["Fasting","Yes or No"],["Ordered By",""],["For Visit","links to Appointments"],["Status","Ordered, Drawn, Results In, then Sent To Provider (clinic) or Faxed (outside), or a custom status"],["Notes","free text"]])+
+   hp("Appointments list",[["Resident","from the roster"],["Visit Type","Physician, Nurse Practitioner, Podiatry, Dermatology, Outside"],["Date and Time",""],["Labs","links to the Labs list"],["Doctor","clinic visits: filled from the clinic schedule, can be changed"],["Checklist","clinic: Chart Retrieved, Orders Faxed; outside: Doctor paperwork signed by PCP, Faxed to pharmacy (Yes/No columns)"],["Status","Scheduled, Seen, Cancelled"],["Custom to-dos","a separate To-Dos list linked to the visit, with a Parent column for smaller steps"]])+
+   hp("Labs list",[["Lab Type","Clinic Lab or Outside Lab"],["Fax To and Fax Number","outside labs only"],["Resident",""],["Test",""],["Draw Date","drawn in the morning"],["Fasting","Yes or No"],["Ordered By",""],["For Visit","links to Appointments"],["Notes","free text"]])+
    hp("Due Dates list",[["Resident",""],["Type","DME, Podiatry, Dermatology"],["Item",""],["Due Date","DME: typed in for each item"],["Last Done and Repeats Every","Podiatry and Dermatology; Next Due calculated by SharePoint"],["SLUMS Distributed","DME to-do, Yes or No"]])+
-   hp("Automatic flows",[["6:00 AM","\"Your day\" email with today's list"],["Monday reminder","anything due in the next 14 days"],["Lab follow-up","flag labs Drawn for 3 days with no results"],["Visit request","nurses fill a Form, it lands on the calendar"]])+
-   hp("If the app is down",[["Every tap saves to a SharePoint list","status changes, notes, new appointments"],["Edits made on a list","show up in the app as a change to Confirm (bring it in) or Review (leave it on the list, keep the app as is, fix later)"],["The lists still work on their own","staff can open them in SharePoint or the Lists app and keep going by hand"]])+
-   hp("Reminders",[["15 minutes before","a push alert to the HIA's work phone for each clinic visit and pickup"],["How","Power Automate checks the list every 5 minutes and sends a Teams or Outlook notification"]])+
+   hp("Built with",[["Power Apps","the app itself, phone layout, reads and writes the lists directly"],["SharePoint Lists","where every bit of data lives"],["Power Automate","reminders and the list-edit check, on a timer every 5 minutes"],["No AI","only fixed rules"]])+
+   hp("Automatic flows",[["6:00 AM","\"Your day\" email with today's list"],["Monday reminder","anything due in the next 14 days"],["Visit request","nurses fill a Form; a timed flow adds it to the calendar"]])+
+   hp("If the app is down",[["Every tap saves to a SharePoint list","status changes, notes, new appointments"],["Edits made on a list","show in the app right away, plus a change card with from and to: Confirm (looks right) or Review (flag it; the old value can be put back)"],["The lists still work on their own","staff can open them in SharePoint or the Lists app and keep going by hand"]])+
+   hp("Reminders",[["15 minutes before","a phone notification to the HIA for each visit"],["How","Power Automate checks the list every 5 minutes and sends a phone notification, so it can arrive a few minutes early or late"]])+
    hp("Numbers list",[["Group, Name, Phone, Extension",""],["Custom numbers","anyone can add one from the Information tab"]])+
    hp("Notes and My To-Dos lists",[["Notes","private notes, one row each"],["Make To-Do","copies a note onto the To Do list"]])+
-   hp("Who sees what",[["HIA","everything, edits everything"],["Nurses","request visits, see their neighborhood"],["Homecare drivers","only their pickups"],["Providers","their own day (optional)"]])+
+   hp("Who sees what",[["HIA","everything, edits everything"],["Nurses","send visit requests through a Form"],["Everyone else","no access unless added to the SharePoint site, since the lists hold resident health info"]])+
   "</div>"+
   '<section class="panel" style="margin-top:16px"><h3>Ground rules</h3><div class="rules">'+
    ['Inside Microsoft 365 only','Work phones only','No AI features','Built with SharePoint Lists and Power Automate','Practice data until IT approves'].map(function(r){return '<span class="pill p-brand">'+r+"</span>"}).join("")+
@@ -1028,7 +1029,7 @@ function remText(e){var a=e.a;return fTime(e.t)+" · "+(e.key==="Outside"?(a.tra
 function showNotif(e,inMin){
   var old=document.getElementById("notif");if(old)old.remove();
   var b=document.createElement("button");b.type="button";b.id="notif";b.className="notif";b.setAttribute("role","status");b.dataset.open="appt:"+e.a.id;
-  b.innerHTML='<span class="ap">HT</span><span><span class="hd"><span>HIA Tracker</span><span>now</span></span><span class="tt">'+(e.key==="Outside"?"Pickup":"Appointment")+" in "+inMin+' min</span><br><span class="bd">'+esc(remText(e))+"</span></span>";
+  b.innerHTML='<span class="ap">PA</span><span><span class="hd"><span>Power Automate</span><span>now</span></span><span class="tt">'+(e.key==="Outside"?"Pickup":"Appointment")+" in "+inMin+' min</span><br><span class="bd">'+esc(remText(e))+"</span></span>";
   document.body.appendChild(b);clearTimeout(notT);notT=setTimeout(function(){b.remove()},7000);
 }
 function checkReminders(force){
@@ -1087,9 +1088,9 @@ document.addEventListener("click",function(e){
   if(ds.syncopen!==undefined){syncSheet();return}
   if(ds.simedit!==undefined){simEdit();if(layer.innerHTML)syncSheet();return}
   if(ds.chgok||ds.chgrev||ds.chgkeep){var cid=ds.chgok||ds.chgrev||ds.chgkeep,cc=listChanges.filter(function(c){return c.id===cid})[0];
-    if(ds.chgok){cc.apply();cc.state="done";toast("Confirmed","The app now matches the "+cc.list+" list.")}
-    else if(ds.chgrev){cc.state="review";toast("Left for review","The list keeps the change. The app keeps the old version until you decide.")}
-    else {cc.state="done";toast("Kept app version","The "+cc.list+" list is set back to "+cc.from+".")}
+    if(ds.chgok){cc.state="done";toast("Confirmed","Marked as checked.")}
+    else if(ds.chgrev){cc.state="review";toast("Flagged","Marked to check later. Nothing was changed back.")}
+    else {cc.undo();cc.state="done";toast("Put back","The "+cc.list+" list is set back to "+cc.from+".")}
     render();renderSync();syncSheet();return}
   if(ds.tmode){state.todayMode=ds.tmode==="day"?"":"cal";render();window.scrollTo(0,0);return}
   if(ds.addmenu!==undefined){addMenu();return}
@@ -1134,7 +1135,7 @@ document.addEventListener("click",function(e){
 });
 function refreshAfter(kind,id){var open=!!layer.querySelector(".drawer[aria-label]:not([aria-label='New item'])");render();if(open)openDrawer(kind,id)}
 render();
-listChanges=mkChanges().slice(0,2).map(function(c,i){c.id="s"+i;c.state="new";return c});syncSeq=2;renderSync();
+listChanges=mkChanges().slice(0,2).map(function(c,i){c.id="s"+i;c.state="new";c.apply();return c});syncSeq=2;render();
 })();
 </script>
 
