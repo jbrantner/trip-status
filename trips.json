@@ -1,6 +1,6 @@
 {
- "updated": "2026-10-19T19:50:40.177Z",
- "helperAt": "2026-10-19T19:50:39Z",
+ "updated": "2026-10-19T20:58:08.941Z",
+ "helperAt": "2026-10-19T20:58:08Z",
  "trips": [
   {
    "date": "2026-10-21",
@@ -33,12 +33,11 @@
   {
    "date": "2026-10-22",
    "time": "09:45",
-   "status": "Pending",
+   "status": "Assigned",
    "label": "Dutch apple theater",
    "drivers": [
     "Assigned",
-    "Assigned",
-    "Pending"
+    "Assigned"
    ],
    "id": "t202610220945n6"
   },
@@ -148,7 +147,7 @@
   {
    "date": "2026-11-17",
    "time": "08:15",
-   "status": "Pending",
+   "status": "Assigned",
    "label": "Gettysburg Outlets",
    "id": "th3301e77ua9t"
   },
@@ -190,23 +189,9 @@
   {
    "date": "2026-12-02",
    "time": "16:15",
-   "status": "Assigned",
+   "status": "Pending",
    "label": "Star Barn",
    "id": "t202612021615n23"
-  },
-  {
-   "date": "2026-12-09",
-   "time": "09:45",
-   "status": "Assigned",
-   "label": "Dutch Apple",
-   "id": "t202612090945n24"
-  },
-  {
-   "date": "2026-12-09",
-   "time": "16:15",
-   "status": "Assigned",
-   "label": "Dutch Apple Theatre",
-   "id": "t202612091615n25"
   },
   {
    "date": "2026-12-10",
